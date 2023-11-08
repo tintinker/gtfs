@@ -11,12 +11,13 @@ pip3 install -r requirements.txt
 ```bash
 python3 config/generate_config.py
 
-```
+
 Name of the configuration: miami
 GTFS URL: http://www.miamidade.gov/transit/googletransit/current/google_transit.zip
 Realtime URL: https://api.goswift.ly/real-time/miami/gtfs-rt-trip-updates
 Timezone UTC Offset (-8 for Pacific Time): -5
 API Key (press enter to skip): [redacted]
+```
 
 3. Start downloader (leave running to get real time data for a day or so)
 ```bash
