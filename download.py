@@ -11,7 +11,7 @@ def run_command(command):
 
 def format_req(url, key = None):
     if not key:
-        return Request(url)
+        return url
     
     parsed_url = urlparse(url)
     query_parameters = {'api_key': key, 'token': key }
@@ -68,7 +68,7 @@ def main():
         print("Starting: ", datetime.now(), file=f)
 
     try:
-        run_command(f"python3 gtfs/gtfs_realtime.py -f {data_dir}/log.log -t {tz} -u {realtime_url} -x {api_key} -d sqlite:///{sqlite_db} -c -v")
+        run_command(f"python3 gtfs/gtfs_realtime.py -f {data_dir}/log.log -t {tz} -u {realtime_url} {'-x ' + api_key if api_key else ''} -d sqlite:///{sqlite_db} -c -v")
     except Exception as e:
         print(e)
         with open(save_log_file, "a+") as f:

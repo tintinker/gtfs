@@ -1,0 +1,12 @@
+api_key_file: ''
+cache_filename: data/philadelphia/cache.csv
+data_dir: data/philadelphia
+graph_filename: data/philadelphia/philadelphia_graph.json
+gtfs_filename: data/philadelphia/philadelphia_gtfs.zip
+gtfs_url: https://jtinker.org/philadelphia_gtfs_bus.zip #https://www3.septa.org/developer/gtfs_public.zip
+name: philadelphia
+realtime_url: https://www3.septa.org/gtfsrt/septa-pa-us/Trip/rtTripUpdates.pb
+requires_key: false
+shp_folder: data/philadelphia/shp
+sqlite_db: data/philadelphia/philadelphia.db
+timezone: -5

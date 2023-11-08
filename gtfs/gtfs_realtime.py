@@ -76,13 +76,9 @@ p.add_option('-f', '--logfile', default=None, dest='logfile',
 opts, args = p.parse_args()
 
 
-
-
 # Set up a logger
 logging.basicConfig(filename=opts.logfile, encoding='utf-8', level=logging.DEBUG)
 logger = logging.getLogger()
-
-
 
 if opts.dsn is None:
     logging.error('No database specified!')
