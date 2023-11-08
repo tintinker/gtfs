@@ -1,0 +1,4 @@
+config/api_keys/*
+data
+.DS_Store
+__pycache__/

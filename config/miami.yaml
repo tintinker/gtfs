@@ -1,0 +1,12 @@
+api_key_file: config/api_keys/miami.yaml
+data_dir: data/miami
+gtfs_filename: data/miami/miami_gtfs.zip
+gtfs_url: http://www.miamidade.gov/transit/googletransit/current/google_transit.zip
+name: miami
+realtime_url: https://api.goswift.ly/real-time/miami/gtfs-rt-trip-updates
+requires_key: true
+sqlite_db: data/miami/miami.db
+timezone: '-5'
+cache_filename: data/miami/miami.csv
+graph_filename: data/miami/miami_graph.json
+shp_folder: data/miami/shp
