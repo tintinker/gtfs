@@ -1,0 +1,48 @@
+less_than_a_diploma:
+  percentage_of: population_over_age_25
+  fields:
+    - no_education
+    - kindergarden
+    - grade1
+    - grade2
+    - grade3
+    - grade4
+    - grade5
+    - grade6
+    - grade6
+    - grade7
+    - grade8
+    - grade9
+    - grade10
+    - grade11
+    - grade12
+
+less_than_a_bachelors_degree:
+  percentage_of: population_over_age_25
+  fields:
+    - less_than_a_diploma
+    - highschool_diploma
+    - received_ged
+    - started_college
+    - finished_some_college
+    - has_associates_degree
+
+income_to_poverty_under_100: #ratio income to poverty under 1.00
+  percentage_of: total_income_known
+  fields:
+    - income_to_poverty_under_50
+    - income_to_poverty_50_to_99
+
+income_to_poverty_under_150: #ratio income to poverty under 1.50
+  percentage_of: total_income_known
+  fields:
+    - income_to_poverty_under_100
+    - income_to_poverty_100_to_124
+    - income_to_poverty_125_to_149
+
+income_to_poverty_under_200: #ratio income to poverty under 2.00
+  percentage_of: total_income_known
+  fields:
+    - income_to_poverty_under_150
+    - income_to_poverty_150_to_184
+    - income_to_poverty_185_to_199
