@@ -97,9 +97,9 @@ class RoutePlanDataset(Dataset):
     
     
 if __name__ == "__main__":
-    # dataset = RoutePlanDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco")
-    # dataset.build()
-    dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/sanfrancisco")
+    dataset = RoutePlanDataset("miami", "data/miami/miami_gtfs.zip", save_folder="datasets/miami")
+    dataset.build()
+    dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/miami")
     dataset.build()
     
     origin = Point(-122.4854634464319, 37.78317831347335)
