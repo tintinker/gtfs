@@ -39,8 +39,9 @@ class RoutePlanDataset(Dataset):
         self.current_route_info.to_csv(save_folder / "current_route_info.csv")
 
     
-    def build(self, save_folder: Union[str, Path] = None):
-        #super().build(save_folder)
+    def build(self, build_original=False, save_folder: Union[str, Path] = None):
+        if build_original:
+            super().build(save_folder)
         self.get_original_route_info()
         self.current_route_info = pd.DataFrame([], columns=["route_id", "shortest_interval", "first_trip_time", "last_trip_time", "collapsed_stop"])  
         self.save(save_folder)
@@ -97,10 +98,13 @@ class RoutePlanDataset(Dataset):
     
     
 if __name__ == "__main__":
-    dataset = RoutePlanDataset("miami", "data/miami/miami_gtfs.zip", save_folder="datasets/miami")
-    dataset.build()
-    dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/miami")
-    dataset.build()
+    # dataset = RoutePlanDataset("miami", "data/miami/miami_gtfs.zip", save_folder="datasets/miami")
+    # dataset.build(build_original=True)
+    # # dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/miami")
+    # # dataset.build()
+    
+    dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/sanfrancisco")
+
     
     origin = Point(-122.4854634464319, 37.78317831347335)
     destination = Point(-122.40820083305051, 37.71270890747616)
