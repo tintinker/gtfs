@@ -1,8 +1,7 @@
 import overpass
 import geopandas as gpd
-import pandas as pd
+from tqdm import tqdm
 from shapely.geometry import Point
-import numpy as np
 
 
 class OpenStreetMapsData:
@@ -42,7 +41,7 @@ class OpenStreetMapsData:
         return self.find(amenity, query, return_geodataframe)
 
     def find(self, name, query, return_geodataframe=True):
-        print(query)
+        tqdm.write("Performing OSM Query: " + query)
         response = self.api.Get(query)
         
         results = []

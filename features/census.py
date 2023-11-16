@@ -126,25 +126,17 @@ class CensusData:
             self.data = pd.read_csv(data_cache, index_col=0)
 
     def cache(self):
-        self.data.to_csv(self.data_cache)
+        self.data.to_csv(str(self.data_cache))
 
         location_list_cache = {f"{k[0]},{k[1]}":v for k,v in self.location_list.items()}
         tract_list_cache = {f"{k[0]},{k[1]}":v for k,v in self.tract_list.items()}
         geo_data = {}
         geo_data["location_list"] = location_list_cache
         geo_data["tract_list"] = tract_list_cache
-        with open(self.geo_cache, "w+") as f:
+        with open(str(self.geo_cache), "w+") as f:
             json.dump(geo_data, f)
 
     def location_request(self, latitude, longitude):
-        # response = requests.get(f"https://geocoding.geo.census.gov/geocoder/geographies/coordinates?y={str(latitude)}&x={str(longitude)}&format=json&benchmark={CensusData.BENCHMARK}&vintage={CensusData.VINTAGE}")
-        
-        # data = response.json()
-        # state_code = data['result']['geographies']['2020 Census Blocks'][0]['STATE']
-        # tract_code = data['result']['geographies']['2020 Census Blocks'][0]['TRACT']
-        # block_code = data['result']['geographies']['2020 Census Blocks'][0]['BLOCK']
-        # county_code = data['result']['geographies']['2020 Census Blocks'][0]['COUNTY']
-
         response = requests.get(f"https://geo.fcc.gov/api/census/block/find?latitude={latitude}&longitude={longitude}&censusYear={CensusData.BLOCK_GROUP_YEAR}&format=json")
         data = response.json()
         state_code = data["Block"]["FIPS"][:2]
@@ -193,8 +185,7 @@ class CensusData:
          
     
     def download_data(self):
-        print("Downloading data")
-
+        dfs = []
         for (state_code, county_code) in self.tract_list:
             query = Query(CensusData.DATA_SOURCE, state_code, county_code)
             query.add_tables_from_yaml(self.tables_file)
@@ -203,7 +194,9 @@ class CensusData:
             for tract in self.tract_list[(state_code, county_code)]:
                 query.add_tract(tract)
 
-        self.data = pd.merge(self.data, query.get(), on=Query.GEO_FIELDS, how="outer")
+            dfs.append(query.get())
+
+        self.data = pd.concat(dfs)
         self.cache()
 
 
