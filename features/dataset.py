@@ -1,3 +1,4 @@
+import ast
 from collections import defaultdict
 from sqlalchemy import create_engine
 from pathlib import Path
@@ -20,6 +21,7 @@ import shutil
 
 tqdm.pandas()
 
+SECONDS_TO_MINUTES = 60
 
 
 class Dataset:
@@ -79,6 +81,107 @@ class Dataset:
             "built": self.built,
             "include_delay": self.include_delay
         }
+
+    @property
+    def all_node_attribute_names(self):
+        return list(self.node_attributes.columns)
+    
+    @property
+    def all_edge_attribute_names(self):
+        return list(self.edge_attriutes.columns)
+    
+    @staticmethod
+    def load(folder: Union[str, Path]):
+        folder = Path(folder)
+
+        with open(folder / "dataset_info.json") as f:
+            dataset_info = json.load(f)
+        
+        with open(folder / "collapsed_stop_mapping.json") as f:
+            collapsed_stop_mapping = json.load(f)
+        
+        with open(folder / "graph.json") as f:
+            graph = json.load(f)
+        
+        dataset = Dataset(dataset_info["name"], dataset_info["gtfs_source"], dataset_info["nearby_stop_threshold"], dataset_info["nearby_poi_threshold"], (dataset_info["census_tables_file"], dataset_info["census_groupings_file"]), dataset_info["num_trip_samples"], dataset_info["save_folder"], dataset_info["include_delay"], dataset_info["delay_sqlite_db_str"], dataset_info["delay_max"], dataset_info["built"])
+        dataset.G = nx.node_link_graph(graph)
+        dataset.collapsed_stop_mapping = collapsed_stop_mapping
+        dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0)
+
+        
+            
+        dataset.node_attributes.routes = dataset.node_attributes.routes.apply(util.parse_set_string)
+        dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1])
+        return dataset
+   
+    
+    def save(self, folder: Union[str, Path] = None):
+        folder = Path(folder) if folder else self.save_folder
+
+        try:
+            shutil.copy2(self.gtfs_source, folder / Path(self.gtfs_source).name)
+            self.gtfs_source = str(folder / Path(self.gtfs_source).name)
+        except Exception as e:
+            print(f"Could not copy over gtfs zip, skipping: {e}")
+
+        util.export_json(self.info, folder / "dataset_info.json")
+        util.export_json(nx.node_link_data(self.G), folder / "graph.json")
+        util.export_json(self.collapsed_stop_mapping, folder / "collapsed_stop_mapping.json")
+        self.node_attributes.to_csv(folder / "node_attribtes.csv")
+        self.edge_attriutes.to_csv(folder / "edge_attributes.csv")
+        
+        for file_path in folder.glob("*"):
+            if file_path.is_file() and file_path.suffix == ".cache":
+                file_path.unlink() 
+
+    def build(self, override = False, save_folder: Union[str, Path] = None):
+        if self.built and not override:
+            raise Exception("Dataset already built and override set to false. If you'd like to force a rebuild, set override to true")
+        
+        with tqdm(total=5, desc="build progress") as pbar:
+            tqdm.write("\nStep 1: Downloading OSM Data")
+            self._download_osm_data()
+            self._to_json_cache("dataset_info", self.info)
+            self._to_csv_cache("osm_stops_data", self.stops_data)
+            pbar.update(1)
+            
+            tqdm.write("\nStep 2: Collapsing Stops and Applying POI Thresholds")
+            self._collapse_stops()
+            self._apply_poi_thresholds()
+            self._to_json_cache("collapsed_stop_mapping", self.collapsed_stop_mapping)
+            self._to_csv_cache("collapse_stops_data", self.stops_data)
+            pbar.update(1)
+
+            tqdm.write("\nStep 3: Adding Census Data")
+            self._add_census_data()
+            self._to_csv_cache("all_stops_data", self.stops_data)
+            pbar.update(1)
+
+            if self.include_delay:
+                tqdm.write("\nStep 4: Adding Delay Data")
+                self._download_delay_info()
+                self._to_csv_cache("delay_df", self.delay_df)
+            pbar.update(1)
+
+
+            tqdm.write("\nFinal Step: Linking Routes")
+            self._link_routes()
+            pbar.update(1)
+
+            self.built = True
+            
+            self.save(save_folder)
+            tqdm.write("Saved to " + str(self.save_folder))
+
+
+
+
+
+
+
+
+
+
 
     def _download_osm_data(self):
         self.min_distance_fields = []
@@ -195,9 +298,12 @@ class Dataset:
                     stop_idx = self.collapsed_stop_mapping[str(stop_id)]
                     next_stop_idx = self.collapsed_stop_mapping[str(next_stop_id)]
 
-                    cur_driving_time = (trip_stop_times.arrival_time[trip_stop_times.stop_sequence == row['stop_sequence'] + 1].iloc[0] - trip_stop_times.departure_time[trip_stop_times.stop_sequence == row['stop_sequence']].iloc[0]) / 60
+                    if stop_idx == next_stop_idx:
+                        continue
 
-                    if stop_idx != next_stop_idx and not self.G.has_edge(stop_idx, next_stop_idx):
+                    cur_driving_time = (trip_stop_times.arrival_time[trip_stop_times.stop_sequence == row['stop_sequence'] + 1].iloc[0] - trip_stop_times.departure_time[trip_stop_times.stop_sequence == row['stop_sequence']].iloc[0]) / SECONDS_TO_MINUTES
+
+                    if not self.G.has_edge(stop_idx, next_stop_idx):
                         self.G.add_edge(stop_idx, next_stop_idx)
                         edge_info[(stop_idx, next_stop_idx)] = {
                             "update_count": 1,
@@ -226,46 +332,6 @@ class Dataset:
         self.edge_attriutes = pd.DataFrame(edge_info.values(), index=pd.MultiIndex.from_tuples(edge_info.keys()))
 
 
-    def save(self, folder: Union[str, Path] = None):
-        folder = Path(folder) if folder else self.save_folder
-
-        try:
-            shutil.copy2(self.gtfs_source, folder / Path(self.gtfs_source).name)
-            self.gtfs_source = str(folder / Path(self.gtfs_source).name)
-        except Exception as e:
-            print(f"Could not copy over gtfs zip, skipping: {e}")
-
-        util.export_json(self.info, folder / "dataset_info.json")
-        util.export_json(nx.node_link_data(self.G), folder / "graph.json")
-        util.export_json(self.collapsed_stop_mapping, folder / "collapsed_stop_mapping.json")
-        self.node_attributes.to_csv(folder / "node_attribtes.csv")
-        self.edge_attriutes.to_csv(folder / "edge_attributes.csv")
-        
-        for file_path in folder.glob("*"):
-            if file_path.is_file() and file_path.suffix == ".cache":
-                file_path.unlink()
-    
-    @staticmethod
-    def load(folder: Union[str, Path]):
-        folder = Path(folder)
-
-        with open(folder / "dataset_info.json") as f:
-            dataset_info = json.load(f)
-        
-        with open(folder / "collapsed_stop_mapping.json") as f:
-            collapsed_stop_mapping = json.load(f)
-        
-        with open(folder / "graph.json") as f:
-            graph = json.load(f)
-        
-        dataset = Dataset(dataset_info["name"], dataset_info["gtfs_source"], dataset_info["nearby_stop_threshold"], dataset_info["nearby_poi_threshold"], (dataset_info["census_tables_file"], dataset_info["census_groupings_file"]), dataset_info["num_trip_samples"], dataset_info["save_folder"], dataset_info["include_delay"], dataset_info["delay_sqlite_db_str"], dataset_info["delay_max"], dataset_info["built"])
-        dataset.G = nx.node_link_graph(graph)
-        dataset.collapsed_stop_mapping = collapsed_stop_mapping
-        dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0)
-        dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1])
-        return dataset
-        
-
     def _to_json_cache(self, name, obj):
         util.export_json(obj, self.save_folder / (name + ".json.cache"))
 
@@ -285,51 +351,4 @@ class Dataset:
         gdf = gpd.GeoDataFrame(df, geometry="geometry")
         return gdf
 
-
-    def build(self, override = False, save_folder: Union[str, Path] = None):
-        if self.built and not override:
-            raise Exception("Dataset already built and override set to false. If you'd like to force a rebuild, set override to true")
-        
-        with tqdm(total=5, desc="build progress") as pbar:
-            tqdm.write("\nStep 1: Downloading OSM Data")
-            self._download_osm_data()
-            self._to_json_cache("dataset_info", self.info)
-            self._to_csv_cache("osm_stops_data", self.stops_data)
-            pbar.update(1)
-            
-            tqdm.write("\nStep 2: Collapsing Stops and Applying POI Thresholds")
-            self._collapse_stops()
-            self._apply_poi_thresholds()
-            self._to_json_cache("collapsed_stop_mapping", self.collapsed_stop_mapping)
-            self._to_csv_cache("collapse_stops_data", self.stops_data)
-            pbar.update(1)
-
-            tqdm.write("\nStep 3: Adding Census Data")
-            self._add_census_data()
-            self._to_csv_cache("all_stops_data", self.stops_data)
-            pbar.update(1)
-
-            if self.include_delay:
-                tqdm.write("\nStep 4: Adding Delay Data")
-                self._download_delay_info()
-                self._to_csv_cache("delay_df", self.delay_df)
-            pbar.update(1)
-
-
-            tqdm.write("\nFinal Step: Linking Routes")
-            self._link_routes()
-            pbar.update(1)
-
-            self.built = True
-            
-            self.save(save_folder)
-            tqdm.write("Saved to " + str(self.save_folder))
-
-
-
-
-
-
-
-
-
+   

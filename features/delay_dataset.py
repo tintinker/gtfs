@@ -1,11 +1,11 @@
 from dataset import Dataset
 import random
-import geopandas as gpd
 import os
-from shapely.geometry import LineString
 import util
 from torch_geometric.utils import from_networkx
 import networkx as nx
+import contextily as ctx
+import matplotlib.pyplot as plt
 
 class DelayDataset(Dataset):
     @staticmethod
@@ -14,14 +14,6 @@ class DelayDataset(Dataset):
         dataset.__class__ = DelayDataset
         return dataset
     
-    @property
-    def all_node_attribute_names(self):
-        return list(self.node_attributes.columns)
-    
-    @property
-    def all_edge_attribute_names(self):
-        return list(self.edge_attriutes.columns)
-    
     def pyg_data(self, node_attribute_names, edge_attribute_names):
         graph_with_attrs = self.G.copy()
         nx.set_node_attributes(graph_with_attrs, self.node_attributes[node_attribute_names].to_dict(orient='index'))
@@ -29,8 +21,7 @@ class DelayDataset(Dataset):
         return from_networkx(graph_with_attrs, node_attribute_names, edge_attribute_names)
 
 
-
-    def to_shapefile(self, shp_folder, num_route_samples = 20):
+    def visualize(self, shp_folder = None, num_route_samples = 20):
         all_unique_routes = list(self.feed.routes.route_id.unique())
         routes = random.sample(all_unique_routes, min(num_route_samples, len(all_unique_routes)))
         
@@ -40,29 +31,31 @@ class DelayDataset(Dataset):
             filter_node = lambda g, node: g.degree[node] > 0
             )
 
-        edges_data = []
-        for u, v in view.edges:
-            line = LineString([
-                (self.node_attributes.loc[u]['stop_lon'], self.node_attributes.loc[u]['stop_lat']),
-                (self.node_attributes.loc[v]['stop_lon'], self.node_attributes.loc[v]['stop_lat'])
-                ])
-            edges_data.append({
-                'from': self.node_attributes.loc[u]['stop_name'],
-                  'to':  self.node_attributes.loc[v]['stop_name'],
-                  'routes': self.edge_attriutes.loc[u,v]['routes'],
-                  'avg_delay': self.edge_attriutes.loc[u,v]['avg_delay'],
-                  'geometry': line
-                  })
+        routes_viz = util.visualize_routes(view, self.node_attributes, self.edge_attriutes)
 
-        gdf_edges = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
+        if shp_folder:
+            routes_viz.to_file(os.path.join(shp_folder, "routes_viz.shp"))
 
-        gdf_edges.to_file(os.path.join(shp_folder, "edges.shp"))
+        
+        return routes_viz
     
     
     
 if __name__ == "__main__":
-    # dataset = DelayDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="data/sanfrancisco/dataset", include_delay=True, delay_sqlite_db_str="data/sanfrancisco/sanfrancisco.db")
+    # dataset = DelayDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco", include_delay=True, delay_sqlite_db_str="data/sanfrancisco/sanfrancisco.db")
     # dataset.build()
-    dataset = DelayDataset.load("data/sanfrancisco/dataset")
-    dataset.to_shapefile("shp", 50)
-    print(dataset.pyg_data(node_attribute_names=['stop_lat', 'stop_lon'], edge_attribute_names=['driving_time', 'avg_delay']))
+
+    dataset = DelayDataset("la", "data/la/la_gtfs.zip", save_folder="datasets/la", include_delay=True, delay_sqlite_db_str="data/la/la.db")
+    dataset.build()
+
+    dataset = DelayDataset("miami", "data/miami/miami_gtfs.zip", save_folder="datasets/miami", include_delay=True, delay_sqlite_db_str="data/miami/miami.db")
+    dataset.build()
+
+    # dataset = DelayDataset.load("data/sanfrancisco/dataset")
+    # gdf_edges = dataset.to_shapefile(num_route_samples=50)
+    # print(dataset.pyg_data(node_attribute_names=['stop_lat', 'stop_lon'], edge_attribute_names=['driving_time', 'avg_delay']))
+    
+    # fig, ax = plt.subplots(figsize=(10, 8))
+    # gdf_edges.plot(ax=ax, color=gdf_edges.color)
+    # ctx.add_basemap(ax, crs='EPSG:4326') 
+    # plt.show()
