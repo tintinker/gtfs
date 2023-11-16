@@ -93,24 +93,11 @@ class RoutePlanDataset(Dataset):
         distance, stop_pair_list = util.multisource_dijkstra(self.G, destination_stop_idxs, origin_stop_idx, weight_function= lambda previous_edge, u,v: self.bus_route_weighting_function(previous_edge, u,v))
         return distance, stop_pair_list
 
-
-    def visualize_route(self, stop_list, shp_folder=None):
-        view, ok = util.filter_graph(
-            self.G, 
-            filter_node = lambda g, node: node in stop_list
-            )
-
-        routes_viz = util.visualize_routes(view, self.node_attributes, self.edge_attriutes)
-
-        if shp_folder:
-            routes_viz.to_file(os.path.join(shp_folder, "routes_viz.shp"))
-
-        return routes_viz
     
     
     
 if __name__ == "__main__":
-    # dataset = DelayDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco", include_delay=True, delay_sqlite_db_str="data/sanfrancisco/sanfrancisco.db")
+    # dataset = DelayDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco")
     # dataset.build()
     dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/sanfrancisco")
     dataset.build()
