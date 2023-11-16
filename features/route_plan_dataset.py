@@ -97,7 +97,7 @@ class RoutePlanDataset(Dataset):
     
     
 if __name__ == "__main__":
-    # dataset = DelayDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco")
+    # dataset = RoutePlanDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco")
     # dataset.build()
     dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/sanfrancisco")
     dataset.build()
