@@ -6,7 +6,6 @@ import geopandas as gpd
 import networkx as nx
 import heapq
 
-from bus_plan_state import BusPlanState
 
 SECONDS_TO_MINUTES = 60
 FIVE_HOURS_IN_MINUTES = 5 * 60
@@ -58,7 +57,7 @@ def filter_graph(g: nx.Graph, filter_edge = lambda graph, source_node, destinati
         return view, False
     return view2, ok
 
-def visualize_route(node_pair_list, bps: BusPlanState, node_attributes):
+def visualize_route(node_pair_list, bps, node_attributes):
     edges_data = []
     for u, v in node_pair_list:
         line = LineString([
@@ -85,7 +84,7 @@ def visualize_route(node_pair_list, bps: BusPlanState, node_attributes):
 
 
 
-def visualize_bps(bps: BusPlanState, node_attributes):
+def visualize_bps(bps, node_attributes):
     edges_data = []
     for u, v in bps.G.edges:
         line = LineString([

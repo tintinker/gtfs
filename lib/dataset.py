@@ -3,9 +3,9 @@ from collections import defaultdict
 from sqlalchemy import create_engine
 from pathlib import Path
 from typing import Union
-from gtfs.lib.census import CensusData
-from queries import delay_query
-from gtfs.lib.osm import OpenStreetMapsData
+from lib.census import CensusData
+from lib.queries import delay_query
+from lib.osm import OpenStreetMapsData
 from shapely import from_wkt
 import numpy as np
 import geopandas as gpd
@@ -15,7 +15,7 @@ from tqdm import tqdm
 import pandas as pd
 import random
 import networkx as nx
-import util
+import lib.util as util
 import shutil
 
 tqdm.pandas()
@@ -202,11 +202,11 @@ class Dataset:
 
         for poi_name, poi_gdf in tqdm(pois, desc="join osm data"):
             tqdm.write("joining data for: " + poi_name)
-            self.stops_data[f"closest_{poi_name}_distance"] = self.stops_data.geometry.apply(lambda p: util.find_closest(p, poi_gdf.geometry)[1])
+            self.stops_data[f"closest_{poi_name}_distance"] = self.stops_data.geometry.apply(lambda p: util.find_closest(p, poi_gdf.geometry, self.cosine_of_longitude)[1])
 
     def _collapse_stops(self):
         self.collapsed_stop_mapping = {}
-        self.stops_data["nearby_stops"] = self.stops_data.progress_apply(lambda row: self.stops_data[util.find_all_within(row["geometry"], self.stops_data.geometry, self.nearby_stop_threshold)].stop_id.tolist(), axis=1)
+        self.stops_data["nearby_stops"] = self.stops_data.progress_apply(lambda row: self.stops_data[util.find_all_within(row["geometry"], self.stops_data.geometry, self.nearby_stop_threshold, self.cosine_of_longitude)].stop_id.tolist(), axis=1)
        
         i = 0
         with tqdm(total=len(self.stops_data), desc="removing duplicate stops") as pbar:
