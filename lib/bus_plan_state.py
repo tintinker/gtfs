@@ -36,8 +36,8 @@ class BusPlanState:
 
     def _load_json(self, json_dict):
         self.shortest_intervals = json_dict["shortest_intervals"]
-        self.routes_to_stops = defaultdict(list).update(json_dict["routes_to_stops"])
-        self.stops_to_routes = defaultdict(set).update({k:set(v) for k,v in json_dict["stops_to_routes"].items()})
+        self.routes_to_stops.update(json_dict["routes_to_stops"])
+        self.stops_to_routes.update({k:set(v) for k,v in json_dict["stops_to_routes"].items()})
         self.G = nx.node_link_graph(json_dict["graph"])
 
     def save(self):
