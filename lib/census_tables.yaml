@@ -1,0 +1,209 @@
+- name: total_population
+  table_id: B01003
+  row: 1
+  percentage_of: total_population
+
+- name: white_population
+  table_id: B02001
+  row: 2
+  percentage_of: total_population
+  
+- name: black_population
+  table_id: B02001
+  row: 3
+  percentage_of: total_population
+
+- name: asian_population
+  table_id: B02001
+  row: 5
+  percentage_of: total_population
+  # 
+- name: total_housing_units
+  table_id: B25003
+  row: 1
+  percentage_of: total_housing_units
+  
+- name: owner_occupied_units
+  table_id: B25003
+  row: 2
+  percentage_of: total_housing_units
+
+- name: rentor_occupied_units
+  table_id: B25003
+  row: 3
+  percentage_of: total_housing_units
+
+
+- name: population_over_age_25
+  table_id: B15003
+  row: 1
+  percentage_of: population_over_age_25
+
+- name: no_education
+  table_id: B15003
+  row: 2
+  percentage_of: population_over_age_25
+  # no schooling completed
+
+- name: kindergarden
+  table_id: B15003
+  row: 4
+  percentage_of: population_over_age_25
+   
+- name: grade1
+  table_id: B15003
+  row: 5
+  percentage_of: population_over_age_25
+  # 
+- name: grade2
+  table_id: B15003
+  row: 6
+  percentage_of: population_over_age_25
+  # 
+- name: grade3
+  table_id: B15003
+  row: 7
+  percentage_of: population_over_age_25
+  # 
+- name: grade4
+  table_id: B15003
+  row: 8
+  percentage_of: population_over_age_25
+  # 
+- name: grade5
+  table_id: B15003
+  row: 9
+  percentage_of: population_over_age_25
+  # 
+- name: grade6
+  table_id: B15003
+  row: 10
+  percentage_of: population_over_age_25
+  # 
+- name: grade7
+  table_id: B15003
+  row: 11
+  percentage_of: population_over_age_25
+  # 
+- name: grade8
+  table_id: B15003
+  row: 12
+  percentage_of: population_over_age_25
+  # 
+- name: grade9
+  table_id: B15003
+  row: 13
+  percentage_of: population_over_age_25
+  # 
+- name: grade10
+  table_id: B15003
+  row: 14
+  percentage_of: population_over_age_25
+  # 
+- name: grade11
+  table_id: B15003
+  row: 15
+  percentage_of: population_over_age_25
+  # 
+- name: grade12
+  table_id: B15003
+  row: 16
+  percentage_of: population_over_age_25
+  # 
+- name: highschool_diploma
+  table_id: B15003
+  row: 17
+  percentage_of: population_over_age_25
+  # 
+- name: received_ged
+  table_id: B15003
+  row: 18
+  percentage_of: population_over_age_25
+  # 
+- name: started_college
+  table_id: B15003
+  row: 19
+  percentage_of: population_over_age_25
+  # 
+- name: finished_some_college
+  table_id: B15003
+  row: 20
+  percentage_of: population_over_age_25
+  # 
+- name: has_associates_degree
+  table_id: B15003
+  row: 21
+  percentage_of: population_over_age_25
+  # 
+- name: has_bachelors_degree
+  table_id: B15003
+  row: 22
+  percentage_of: population_over_age_25
+  # 
+- name: has_masters_degree
+  table_id: B15003
+  row: 23
+  percentage_of: population_over_age_25
+  # 
+- name: has_professional_degree
+  table_id: B15003
+  row: 24
+  percentage_of: population_over_age_25
+  # 
+- name: has_doctorate
+  table_id: B15003
+  row: 25
+  percentage_of: population_over_age_25
+  # 
+
+- name: total_income_known
+  table_id: C17002
+  row: 1
+  percentage_of: total_income_known
+  # total who poverty status is determined
+
+- name: income_to_poverty_under_50
+  table_id: C17002
+  row: 2
+  percentage_of: total_income_known
+  # ratio income to poverty under 50%
+
+- name: income_to_poverty_50_to_99
+  table_id: C17002
+  row: 3
+  percentage_of: total_income_known
+  # ratio between 0.5 and 0.99
+
+- name: income_to_poverty_100_to_124
+  table_id: C17002
+  row: 4
+  percentage_of: total_income_known
+  # ratio between 1.00 and 1.24
+
+- name: income_to_poverty_125_to_149
+  table_id: C17002
+  row: 5
+  percentage_of: total_income_known
+  # 
+- name: income_to_poverty_150_to_184
+  table_id: C17002
+  row: 6
+  percentage_of: total_income_known
+  # 
+- name: income_to_poverty_185_to_199
+  table_id: C17002
+  row: 7
+  percentage_of: total_income_known
+  # ratio between 1.85 and 1.99
+
+- name: income_to_poverty_above_200
+  table_id: C17002
+  row: 8
+  percentage_of: total_income_known
+  # ratio income to poverty over 2
+
+- name: vehicles
+  table_id: B25046
+  row: 1
+  percentage_of: total_population
+  #number of vehicles available
