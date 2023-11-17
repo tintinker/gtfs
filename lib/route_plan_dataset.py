@@ -4,7 +4,7 @@ from typing import List, Union
 import numpy as np
 from dataset import Dataset
 import random
-from bus_plan_state import BusPlanState
+from gtfs.lib.bus_plan_state import BusPlanState
 import util
 import contextily as ctx
 import matplotlib.pyplot as plt
@@ -92,9 +92,9 @@ class RoutePlanDataset(Dataset):
 if __name__ == "__main__":
     np.random.seed(42)
     random.seed(42)
-    # dataset = RoutePlanDataset("miami", "data/miami/miami_gtfs.zip", save_folder="datasets/miami")
-    # dataset.build()
-
+    dataset = RoutePlanDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco")
+    dataset.build()
+    exit(0)
     dataset: RoutePlanDataset = RoutePlanDataset.load("datasets/miami")
 
     def show(viz):

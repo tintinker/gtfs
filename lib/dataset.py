@@ -3,10 +3,9 @@ from collections import defaultdict
 from sqlalchemy import create_engine
 from pathlib import Path
 from typing import Union
-from census import CensusData
+from gtfs.lib.census import CensusData
 from queries import delay_query
-from osm import OpenStreetMapsData
-from shapely.geometry import Point
+from gtfs.lib.osm import OpenStreetMapsData
 from shapely import from_wkt
 import numpy as np
 import geopandas as gpd

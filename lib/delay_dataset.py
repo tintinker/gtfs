@@ -1,4 +1,4 @@
-from dataset import Dataset
+from gtfs.lib.dataset import Dataset
 import random
 import os
 import util
