@@ -39,7 +39,7 @@ class RoutePlanDataset(Dataset):
         return BusPlanState(name, self.node_attributes.index.tolist(), self.save_folder)
 
     def bus_route_weighting_function(self, bus_plan_state: BusPlanState, previous_edge, u, v):
-        driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], dataset.cosine_of_longitude) 
+        driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_of_longitude) 
         common_routes = bus_plan_state.get_routes_in_common(previous_edge, (u,v))
         requires_transfer = (len(common_routes) == 0)
         return (
@@ -55,7 +55,7 @@ class RoutePlanDataset(Dataset):
             u,v = node_pair_list[i]
             previous_edge = node_pair_list[i-1] if i > 0 else None
 
-            driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], dataset.cosine_of_longitude) 
+            driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_of_longitude) 
             common_routes = bus_plan_state.get_routes_in_common(previous_edge, (u,v))
             requires_transfer = (len(common_routes) == 0)
             slower_route_adjustment = min(0, bus_plan_state.get_overall_shortest_interval(common_routes) - bus_plan_state.get_min_wait_time_at_stop(u))
