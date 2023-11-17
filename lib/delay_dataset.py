@@ -1,4 +1,4 @@
-from dataset import Dataset
+from lib.dataset import Dataset
 import random
 import os
 import util

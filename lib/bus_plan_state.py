@@ -2,7 +2,7 @@ from collections import defaultdict
 import json
 from pathlib import Path
 from tqdm import tqdm
-import util
+import lib.util as util
 from gtfs_functions import Feed
 import pandas as pd
 import networkx as nx
