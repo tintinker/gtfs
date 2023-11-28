@@ -61,7 +61,7 @@ class BusPlanState:
         return similarity
         
     
-    def node_attribute_similarity_example2(self, other):
+    def node_attribute_similarity_example(self, other):
         def lat_lng_grocery_info(bps: BusPlanState):
             indices = np.array(bps.all_stops)
             #full list of attributes in datasets/[CITY]/node_attributes.csv
