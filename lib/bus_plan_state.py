@@ -6,19 +6,20 @@ import lib.util as util
 from gtfs_functions import Feed
 import pandas as pd
 import networkx as nx
+import numpy as np
 
 class BusPlanState:
-    def __init__(self, name, node_index_list, save_folder, from_df: pd.DataFrame=None, from_json = None):
+    def __init__(self, name: str, node_attributes: pd.DataFrame, save_folder: str, from_df: pd.DataFrame = None, from_json = None):
         self.name = name
-        self.node_index_list = node_index_list
+        self.node_index_list = node_attributes.index.tolist()
+        self.node_attributes = node_attributes
         self.save_folder = save_folder
-        self.data = pd.DataFrame([], columns=["route_id", "shortest_interval", "first_trip_time", "last_trip_time", "collapsed_stop"])
         
         self.shortest_intervals = {}
         self.routes_to_stops = defaultdict(list)
         self.stops_to_routes = defaultdict(set)
         self.G = nx.DiGraph()
-        self.G.add_nodes_from(node_index_list)
+        self.G.add_nodes_from(self.node_index_list)
 
 
         if from_df is not None and from_json is not None:
@@ -28,13 +29,84 @@ class BusPlanState:
         elif from_json is not None:
             self._load_json(from_json)
         else:
-            self.current_route = "0"
+            self.current_route = 0
             self.shortest_intervals[self.current_route] = util.DEFAULT_ROUTE_FREQUENCY_IN_MINS
 
     def __str__(self) -> str:
         return f"BusPlanState: {len(self.routes)} routes, {len(self.stops)} stops, graph: {self.G}"
+    
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, BusPlanState):
+            return False
+        if self.shortest_intervals != other.shortest_intervals:
+            return False
+        if self.routes_to_stops != other.routes_to_stops:
+            return False
+        if self.stops_to_routes != other.stops_to_routes:
+            return False
+        if self.G.edges != other.G.edges:
+            return False
+        return True
+    
+    def route_length_similarity_example(self, other):
+        def route_length_info(bps: BusPlanState):
+            route_lengths = [len(v) for v in bps.routes_to_stops.values()]
+            return np.mean(route_lengths), np.std(route_lengths), len(bps.routes_to_stops.keys()) #avg, standard dev, and number of routes
+        
+        self_route_length_info = np.array(route_length_info(self))
+        other_route_length_info = np.array(route_length_info(other))
+       
+        distance = np.linalg.norm(self_route_length_info - other_route_length_info) #distance = sqrt(a^2 + b^2 + c^2 + ...)
+        similarity = 1 / distance
+        return similarity
+        
+    
+    def node_attribute_similarity_example(self, other):
+        def lat_lng_grocery_info(bps: BusPlanState):
+            indices = np.array(bps.all_stops)
+            #full list of attributes in datasets/[CITY]/node_attributes.csv
+            latitudes = bps.node_attributes.stop_lat.loc[indices]
+            longitudes = bps.node_attributes.stop_lon.loc[indices]
+            near_grocery = bps.node_attributes.near_grocery.loc[indices] #near grocery is a binary 1 if next to grocery, 0 if not next to grocery store
+            return np.mean(latitudes), np.std(latitudes), np.mean(longitudes), np.std(longitudes), np.mean(near_grocery)
+        
+        self_lat_lng_grocery = np.array(lat_lng_grocery_info(self))
+        other_lat_lng_grocery = np.array(lat_lng_grocery_info(other))
 
-    def _load_json(self, json_dict):
+        distance = np.linalg.norm(self_lat_lng_grocery - other_lat_lng_grocery) #distance = sqrt(a^2 + b^2 + c^2 + ...)
+        similarity = 1 / distance
+        return similarity
+    
+    def current_route_similarity_example(self, other):
+        def current_route_info(bps: BusPlanState, route_index):
+            stops = bps.routes_to_stops[route_index]
+            if not stops:
+                return 0, 0, 0, 0, 0
+            
+            num_stops_on_route = len(stops)
+            first_latitude, first_longitude = bps.node_attributes.stop_lat.loc[stops[0]], bps.node_attributes.stop_lon.loc[stops[0]]
+            last_latitude, last_longitude = bps.node_attributes.stop_lat.loc[stops[-1]], bps.node_attributes.stop_lon.loc[stops[-1]]   
+            return num_stops_on_route, last_latitude, last_longitude, np.abs(first_latitude - last_latitude), np.abs(first_longitude - last_longitude)
+        
+        self_current_route_info = current_route_info(self, self.current_route)
+        
+        #if we're on the third route of the current bus plan, compare the third route of other bus plans
+        if self.current_route in other.routes_to_stops:
+            other_current_route_info = current_route_info(other, self.current_route)
+        #if comparing with the original bus plan for a city, their routes will be strings, so need to find the string at the correct index
+        elif self.current_route <= len(other.routes_to_stops.keys()):
+            other_current_route_info = current_route_info(other,  list(other.routes_to_stops.keys())[-1])
+        #if the other bus plan doesn't have enough routes, just take the last one
+        else:
+            other_current_route_info = current_route_info(other, list(other.routes_to_stops.keys())[-1]) 
+            
+
+        distance = np.linalg.norm(np.array(self_current_route_info) - np.array(other_current_route_info)) #distance = sqrt(a^2 + b^2 + c^2 + ...)
+        similarity = 1 / distance
+        return similarity
+        
+    
+    def _load_json(self, json_dict, node_attributes):
         self.shortest_intervals = json_dict["shortest_intervals"]
         self.routes_to_stops.update(json_dict["routes_to_stops"])
         self.stops_to_routes.update({k:set(v) for k,v in json_dict["stops_to_routes"].items()})
@@ -61,7 +133,7 @@ class BusPlanState:
             self.G.add_edge(self.routes_to_stops[self.current_route][-2], self.routes_to_stops[self.current_route][-1])
     
     def end_current_route(self):
-        self.current_route = str(int(self.current_route) + 1)
+        self.current_route += 1
         self.shortest_intervals[self.current_route] = util.DEFAULT_ROUTE_FREQUENCY_IN_MINS
 
     def change_frequency_for_route(self, route, shortest_interval):
@@ -94,9 +166,17 @@ class BusPlanState:
     
     def get_avg_wait_time_for_route(self, route_id):
         return self.shortest_intervals[route_id]
+    
+    @property
+    def all_stops(self):
+        """
+        every stop from every route, includes duplicates
+        """
+        return [stop for stop_list in self.routes_to_stops.values() for stop in stop_list]
+
 
     @staticmethod
-    def create_from_feed(feed: Feed, collapsed_stop_mapping, node_index_list, save_folder):
+    def create_from_feed(feed: Feed, collapsed_stop_mapping, node_attributes, save_folder):
         routes = feed.routes
         stop_times = feed.stop_times[['route_id', 'trip_id', 'stop_id', 'stop_sequence', 'departure_time']]
         first_departure_times = stop_times[stop_times.stop_sequence == 1].sort_values('departure_time')
@@ -121,7 +201,7 @@ class BusPlanState:
                 routes_frequencies_stops.append([route_id, shortest_interval, first_trip_time, last_trip_time, collapsed_stop_mapping[stop_id]])
 
         data = pd.DataFrame(routes_frequencies_stops, columns=["route_id", "shortest_interval", "first_trip_time", "last_trip_time", "collapsed_stop"]).drop_duplicates()       
-        bps = BusPlanState("original", node_index_list, save_folder, from_df = data)
+        bps = BusPlanState("original", node_attributes, save_folder, from_df = data)
         return bps
 
     def _load_dataframe(self, df: pd.DataFrame):
