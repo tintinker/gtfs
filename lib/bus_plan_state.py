@@ -101,7 +101,7 @@ class BusPlanState:
             other_current_route_info = current_route_info(other, list(other.routes_to_stops.keys())[-1]) 
             
 
-        distance = np.linalg.norm(self_current_route_info - other_current_route_info) #distance = sqrt(a^2 + b^2 + c^2 + ...)
+        distance = np.linalg.norm(np.array(self_current_route_info) - np.array(other_current_route_info)) #distance = sqrt(a^2 + b^2 + c^2 + ...)
         similarity = 1 / distance
         return similarity
         
