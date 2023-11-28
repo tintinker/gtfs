@@ -28,15 +28,15 @@ class RoutePlanDataset(Dataset):
         if Path(self.save_folder / "original.busplanstate.json").is_file():
             with open(Path(self.save_folder / "original.busplanstate.json")) as f:
                 data = json.load(f)
-            return BusPlanState("original", self.node_attributes.index.tolist(), self.save_folder, from_json=data)
-        bps = BusPlanState.create_from_feed(self.feed, self.collapsed_stop_mapping, self.node_attributes.index.tolist(), self.save_folder)
+            return BusPlanState("original", self.node_attributes, self.save_folder, from_json=data)
+        bps = BusPlanState.create_from_feed(self.feed, self.collapsed_stop_mapping, self.node_attributes, self.save_folder)
         bps.save()
         return bps
     
     def get_blank_bus_plan_state(self, name) -> BusPlanState:
         if name == "original":
             raise Exception("You can name it anything but 'original'")
-        return BusPlanState(name, self.node_attributes.index.tolist(), self.save_folder)
+        return BusPlanState(name, self.node_attributes, self.save_folder)
 
     def bus_route_weighting_function(self, bus_plan_state: BusPlanState, previous_edge, u, v):
         driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_of_longitude) 
