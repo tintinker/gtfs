@@ -41,14 +41,16 @@ class TableGrouping:
 class Query:
     GEO_FIELDS = ["state","county","tract","block group"]
 
-    def __init__(self, census_data_source, state_code, county_code):
+    def __init__(self, census_data_source, state_code, county_code, logger=None):
         self.census_data_source = census_data_source
         self.state_code = state_code
         self.county_code = county_code
+        self.logger = logger
 
         self.tracts = []
         self.tables = []
         self.groupings = []
+        
 
 
 
@@ -81,6 +83,7 @@ class Query:
         for url_list in tqdm(list(self.get_batched_queries())):
             df = pd.DataFrame(columns=Query.GEO_FIELDS)
             for url in url_list:
+                self._debug(str(url))
                 r = requests.get(url)
                 batchdf = pd.DataFrame(r.json())
                 batchdf.columns = batchdf.iloc[0]
@@ -100,13 +103,17 @@ class Query:
             df = g.apply(df)
 
         return df
+    
+    def _debug(self, message):
+        if self.logger:
+            self.logger.debug(message)
 
 
 class CensusData:
     DATA_SOURCE = "2021/acs/acs5"
     BLOCK_GROUP_YEAR = "2020"
 
-    def __init__(self, tables_file, groupings_file = None, geo_cache = "census_geo.cache", data_cache = "census_data.cache"):
+    def __init__(self, tables_file, groupings_file = None, geo_cache = "census_geo.cache", data_cache = "census_data.cache", logger=None):
         self.tables_file = tables_file
         self.groupings_file = groupings_file
 
@@ -116,6 +123,7 @@ class CensusData:
 
         self.data_cache = data_cache
         self.geo_cache = geo_cache
+        self.logger = logger
         
         if Path(geo_cache).is_file():
             with open(geo_cache) as f:
@@ -190,7 +198,7 @@ class CensusData:
     def download_data(self):
         dfs = []
         for (state_code, county_code) in self.tract_list:
-            query = Query(CensusData.DATA_SOURCE, state_code, county_code)
+            query = Query(CensusData.DATA_SOURCE, state_code, county_code, self.logger)
             query.add_tables_from_yaml(self.tables_file)
             if self.groupings_file:
                 query.add_groupings_from_yaml(self.groupings_file)

@@ -1,11 +1,11 @@
+from pathlib import Path
+from typing import Union
 from lib.dataset import Dataset
 import random
 import os
-import util
+import lib.util as util
 from torch_geometric.utils import from_networkx
 import networkx as nx
-import contextily as ctx
-import matplotlib.pyplot as plt
 
 class DelayDataset(Dataset):
     @staticmethod
@@ -13,6 +13,10 @@ class DelayDataset(Dataset):
         dataset = Dataset.load(folder)
         dataset.__class__ = DelayDataset
         return dataset
+    
+    def build(self, override_if_already_built = False, use_cache = True, save_folder: Union[str, Path] = None):
+        super()._build(override_if_already_built, use_cache, save_folder)
+        self.built = True
     
     def pyg_data(self, node_attribute_names, edge_attribute_names):
         graph_with_attrs = self.G.copy()

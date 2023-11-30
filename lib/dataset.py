@@ -10,13 +10,14 @@ from shapely import from_wkt
 import numpy as np
 import geopandas as gpd
 import json
-from gtfs_functions import Feed
 from tqdm import tqdm
 import pandas as pd
 import random
 import networkx as nx
 import lib.util as util
 import shutil
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 tqdm.pandas()
 
@@ -24,7 +25,7 @@ SECONDS_TO_MINUTES = 60
 
 
 class Dataset:
-    def __init__(self, name, gtfs_zip_filename, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False):
+    def __init__(self, name, gtfs_zip_filename, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False, include_census=True):
         if num_trip_samples % 2 == 0:
             assert Exception("num_trip_sampels must be odd number")
         
@@ -36,17 +37,23 @@ class Dataset:
         
         self.save_folder = Path(save_folder)
         self.save_folder.mkdir(exist_ok=True, parents=True)
+       
+        self.logger = logging.getLogger(f"dataset_builder [{save_folder}]")
+        handler = logging.FileHandler(save_folder / "dataset.log")
+        self.logger.addHandler(handler)
 
         self.name = name
         self.gtfs_source = gtfs_zip_filename
-        self.feed = Feed(gtfs_zip_filename, patterns=False)
-        self.stops_data = gpd.GeoDataFrame(self.feed.stops.copy(), geometry="geometry")
-        self.stops_data.stop_id = self.stops_data.stop_id.astype(str)
+        self.stops_data, self.trips, self.stop_times, _ = util.load_gtfs_zip(gtfs_zip_filename)
+       
 
-        self.osm = OpenStreetMapsData(self.stops_data.stop_lat.min(), self.stops_data.stop_lon.min(), self.stops_data.stop_lat.max(), self.stops_data.stop_lon.max())
+        self.osm = OpenStreetMapsData(self.stops_data.stop_lat.min(), self.stops_data.stop_lon.min(), self.stops_data.stop_lat.max(), self.stops_data.stop_lon.max(), logger=self.logger)
         self.cosine_of_longitude = np.cos(self.stops_data.stop_lon.median() / (2*np.pi))
+        
+        self.include_census = include_census
         census_tables, census_groupings = census_tables_and_groupings
-        self.census = CensusData(census_tables, census_groupings, geo_cache = self.save_folder / f"{name}_census_geo.cache", data_cache= self.save_folder / f"{name}_census_data.cache" )
+        self.census = CensusData(census_tables, census_groupings, geo_cache = self.save_folder / f"{name}_census_geo.cache", data_cache= self.save_folder / f"{name}_census_data.cache", logger=self.logger)
+        
         self.min_distance_fields = []
         self.collapsed_stop_mapping = {}
         self.nearby_stop_threshold = nearby_stop_threshold
@@ -130,7 +137,7 @@ class Dataset:
             shutil.copy2(self.gtfs_source, folder / Path(self.gtfs_source).name)
             self.gtfs_source = str(folder / Path(self.gtfs_source).name)
         except Exception as e:
-            print(f"Could not copy over gtfs zip, skipping: {e}")
+            self._debug(f"Could not copy over gtfs zip, skipping: {e}")
 
         util.export_json(self.info, folder / "dataset_info.json")
         util.export_json(nx.node_link_data(self.G), folder / "graph.json")
@@ -142,47 +149,80 @@ class Dataset:
             if file_path.is_file() and file_path.suffix == ".cache":
                 file_path.unlink() 
 
-    def _build(self, override = False, save_folder: Union[str, Path] = None):
-        if self.built and not override:
+
+    def _build(self, override_if_already_built = False, use_cache = True, save_folder: Union[str, Path] = None):
+        if self.built and not override_if_already_built:
             raise Exception("Dataset already built and override set to false. If you'd like to force a rebuild, set override to true")
         
         with tqdm(total=5, desc="build progress") as pbar:
-            tqdm.write("\nStep 1: Downloading OSM Data")
-            self._download_osm_data()
-            self._to_json_cache("dataset_info", self.info)
-            self._to_csv_cache("osm_stops_data", self.stops_data)
+            self._debug("\nStep 1: Downloading OSM Data")
+            
+            if use_cache:
+                _, info_ok = self._from_json_cache("dataset_info")
+                stops_data, osm_ok =  self._from_csv_cache("osm_stops_data")
+            if use_cache and info_ok and osm_ok:
+                self.stops_data = stops_data
+                self._debug("Loaded OSM from cache")
+            else:
+                self._download_osm_data()
+                self._to_json_cache("dataset_info", self.info)
+                self._to_csv_cache("osm_stops_data", self.stops_data)
             pbar.update(1)
             
-            tqdm.write("\nStep 2: Collapsing Stops and Applying POI Thresholds")
-            self._collapse_stops()
-            self._apply_poi_thresholds()
-            self._to_json_cache("collapsed_stop_mapping", self.collapsed_stop_mapping)
-            self._to_csv_cache("collapse_stops_data", self.stops_data)
+            self._debug("\nStep 2: Collapsing Stops and Applying POI Thresholds")
+            
+            if use_cache:
+                collapsed_stop_mapping, mapping_ok = self._from_json_cache("collapsed_stop_mapping")
+                stops_data, stops_ok =  self._from_csv_cache("collapse_stops_data")
+
+            if use_cache and mapping_ok and stops_ok:
+                self.collapsed_stop_mapping = collapsed_stop_mapping
+                self.stops_data = stops_data
+                self._debug("Loaded Collapsed Stops from cache")
+            else:
+                self._collapse_stops()
+                self._apply_poi_thresholds()
+                self._to_json_cache("collapsed_stop_mapping", self.collapsed_stop_mapping)
+                self._to_csv_cache("collapse_stops_data", self.stops_data)
             pbar.update(1)
 
 
-            tqdm.write("\nStep 3: Adding Census Data")
-            self._add_census_data()
-            self._to_csv_cache("all_stops_data", self.stops_data)
-            pbar.update(1)
+            if self.include_census:
+                self._debug("\nStep 3: Adding Census Data")
 
-            self.collapsed_stop_mapping = self._from_json_cache("collapsed_stop_mapping")
-            self.stops_data = self._from_csv_cache("all_stops_data")
+                if use_cache:
+                    stops_data, census_ok = self._from_csv_cache("all_stops_data")
+                
+                if self.include_census and use_cache and census_ok:
+                    self.stops_data = stops_data
+                    self._debug("Loaded Census info cache")
+                elif self.include_census:
+                    self._add_census_data()
+                    self._to_csv_cache("all_stops_data", self.stops_data)
+            pbar.update(1)
 
 
             if self.include_delay:
-                tqdm.write("\nStep 4: Adding Delay Data")
-                self._download_delay_info()
-                self._to_csv_cache("delay_df", self.delay_df)
+                self._debug("\nStep 4: Adding Delay Data")
+                
+                if use_cache:
+                    delay_df, delay_ok =  self._from_csv_cache("delay_df")
+                
+                if use_cache and delay_ok:
+                    self.delay_df = delay_df
+                    self._debug("Loaded Delay info cache")
+                else:
+                    self._download_delay_info()
+                    self._to_csv_cache("delay_df", self.delay_df)
             pbar.update(1)
 
 
-            tqdm.write("\nFinal Step: Linking Routes")
+            self._debug("\nFinal Step: Linking Routes")
             self._link_routes()
             pbar.update(1)
             
             self.save(save_folder)
-            tqdm.write("Saved to " + str(self.save_folder))
+            self._debug("Saved to " + str(self.save_folder))
 
 
     def _download_osm_data(self):
@@ -201,7 +241,7 @@ class Dataset:
         self.poi_names = [name for (name, _) in pois]
 
         for poi_name, poi_gdf in tqdm(pois, desc="join osm data"):
-            tqdm.write("joining data for: " + poi_name)
+            self._debug("joining data for: " + poi_name)
             self.stops_data[f"closest_{poi_name}_distance"] = self.stops_data.geometry.apply(lambda p: util.find_closest(p, poi_gdf.geometry, self.cosine_of_longitude)[1])
 
     def _collapse_stops(self):
@@ -263,8 +303,8 @@ class Dataset:
 
     def _link_routes(self):
         self.G = nx.DiGraph()
-        trips = self.feed.trips
-        stop_times = self.feed.stop_times
+        trips = self.trips
+        stop_times = self.stop_times
    
         sampled_trips = []
         for route_id, group in trips.groupby('route_id'):
@@ -299,8 +339,8 @@ class Dataset:
                 if not next_stop.empty:
                     next_stop_id = next_stop['stop_id'].values[0]
 
-                    stop_idx = self.collapsed_stop_mapping[str(stop_id)]
-                    next_stop_idx = self.collapsed_stop_mapping[str(next_stop_id)]
+                    stop_idx = self.collapsed_stop_mapping[stop_id]
+                    next_stop_idx = self.collapsed_stop_mapping[next_stop_id]
 
                     if stop_idx == next_stop_idx:
                         continue
@@ -344,15 +384,25 @@ class Dataset:
         df.to_csv(self.save_folder / (name + ".csv.cache"))
 
     def _from_json_cache(self, name):
+        if not Path(self.save_folder / (name + ".json.cache")).is_file():
+            return None, False
+         
         with open(self.save_folder / (name + ".json.cache")) as f:
-            return json.load(f)
+            return json.load(f), True
 
     def _from_csv_cache(self, name):
+        if not Path(self.save_folder / (name + ".csv.cache")).is_file():
+            return None, False
+        
         df = pd.read_csv(self.save_folder / (name + ".csv.cache"))
         if "geometry" not in df.columns:
-            return df
+            return df, True
+        
         df.geometry = df.geometry.apply(from_wkt)
         gdf = gpd.GeoDataFrame(df, geometry="geometry")
-        return gdf
+        return gdf, True
 
-   
+    def _debug(self, *messages):
+        message = " ".join([str(m) for m in messages])
+        self.logger.debug(message)
+        tqdm.write(message)

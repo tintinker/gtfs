@@ -1,10 +1,13 @@
-from ast import literal_eval
+import pandas as pd
 import json
+from zipfile import ZipFile
 import numpy as np
 from shapely import Point, LineString
 import geopandas as gpd
 import networkx as nx
 import heapq
+from urllib.parse import urlencode, urlparse, parse_qs
+from urllib.request import urlopen, Request
 
 
 SECONDS_TO_MINUTES = 60
@@ -19,9 +22,6 @@ AVG_BUS_SPEED_METERS_PER_MIN = 833 #about 30mph
 METERS_TO_DEGREE = 111111 #https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
 COLORS = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink']
 
-
-def parse_set_string(s):
-        return set([item.replace('"', '') for item in s[1:-1].split()]) if s else set()
         
 def export_json(d, filename):
     with open(filename, "w+") as f:
@@ -52,10 +52,9 @@ def filter_graph(g: nx.Graph, filter_edge = lambda graph, source_node, destinati
     view = nx.subgraph_view(g, filter_edge=lambda n1, n2: filter_edge(g, n1, n2))
     view2 = nx.subgraph_view(view, filter_node=lambda n: filter_node(view, n))
 
-    ok = True
     if len(view2) == 0:
         return view, False
-    return view2, ok
+    return view2, True
 
 def visualize_route(node_pair_list, bps, node_attributes):
     edges_data = []
@@ -154,3 +153,53 @@ def multisource_dijkstra(G: nx.Graph, sources, target, weight_function: lambda p
 
     return final_distance, final_route
 
+def load_gtfs_zip(filename):
+    def seconds_since_midnight(time_string):
+        try:
+            vals = time_string.split(':')
+            seconds = 0
+            for p, v in enumerate(vals):
+                seconds += int(v) * (3600/(60**p))
+            return seconds
+        except:
+            return np.nan
+    
+    with ZipFile(filename) as myzip:
+            data_types = {
+                'shape_id': str,
+                'stop_id': str,
+                'route_id': str,
+                'trip_id': str
+            }
+            stops = pd.read_csv(myzip.open('stops.txt'), dtype=data_types )
+            trips = pd.read_csv(myzip.open('trips.txt'), dtype=data_types)
+            stop_times = pd.read_csv(myzip.open('stop_times.txt'), dtype=data_types)
+            routes = pd.read_csv(myzip.open('routes.txt'), dtype=data_types)
+
+            stops["geometry"] = stops.apply(lambda row: Point(row["stop_lon"], row["stop_lat"]), axis=1)
+            stops = gpd.GeoDataFrame(stops, geometry="geometry")
+
+            stop_times.arrival_time = stop_times.arrival_time.apply(seconds_since_midnight)
+            stop_times.departure_time = stop_times.departure_time.apply(seconds_since_midnight)
+
+    return stops, trips, stop_times, routes
+
+def format_req(url, key = None):
+    if not key:
+        return Request(url)
+    
+    parsed_url = urlparse(url)
+    query_parameters = {'api_key': key, 'token': key }
+    existing_query_params = parse_qs(parsed_url.query)
+    existing_query_params.update(query_parameters)
+    new_query = urlencode(existing_query_params, doseq=True)
+    new_url = parsed_url._replace(query=new_query).geturl()
+    
+    req = Request(new_url)
+    req.add_header('Authorization', key)
+    return req
+
+def seconds_since_midnight(dt):
+    midnight = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    delta = dt - midnight
+    return delta.total_seconds()

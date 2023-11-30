@@ -6,10 +6,8 @@
 pip3 install -r requirements.txt
 ```
 
-2. Create config file (find gtfs and realtime urls on city website, may require requesting an api key) 
+2. Building Datasets & Realtime DBs: `main.py`
 
-```bash
-python3 features/route_plan_dataset.py
-```
+3. Route Planning (Colab)
 
-Put into your fav visualizer
+4. Delays (Colab)
