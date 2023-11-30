@@ -186,7 +186,7 @@ def load_gtfs_zip(filename):
 
 def format_req(url, key = None):
     if not key:
-        return url
+        return Request(url)
     
     parsed_url = urlparse(url)
     query_parameters = {'api_key': key, 'token': key }
@@ -197,8 +197,7 @@ def format_req(url, key = None):
     
     req = Request(new_url)
     req.add_header('Authorization', key)
-    
-    return req.get_full_url()
+    return req
 
 def seconds_since_midnight(dt):
     midnight = dt.replace(hour=0, minute=0, second=0, microsecond=0)

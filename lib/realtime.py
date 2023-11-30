@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from threading import Thread
 import time
 import sys
 from urllib.request import urlopen
@@ -12,6 +13,7 @@ import logging
 from pathlib import Path
 from sqlalchemy import create_engine
 import lib.util as util
+logging.basicConfig(level=logging.DEBUG)
 
 WAIT_PERIOD = 15
 
@@ -58,7 +60,6 @@ AllClasses = (TripUpdate, StopTimeUpdate)
 #'UTC Time Zone Offset (ex. -8 for Pacific Standard Time)'
 class RealtimeWatcher:
     def __init__(self, gtfs_filename, realtime_updates_url, timezone, save_folder, api_key = None, resuming_from_previous=False):
-        self.logger = logger
         self.realtime_updates_url = realtime_updates_url
         self.timezone = timezone
         self.api_key = api_key
@@ -66,8 +67,11 @@ class RealtimeWatcher:
         save_folder = Path(save_folder)
         save_folder.mkdir(exist_ok=True, parents=True)
 
-        logging.basicConfig(filename=str( save_folder / "realtime.log"), level=logging.DEBUG)
-        logger = logging.getLogger("realtime_watcher")
+
+        self.logger = logging.getLogger(f"realtime_watcher [{save_folder}]")
+        handler = logging.FileHandler(save_folder / "realtime.log")
+        self.logger.addHandler(handler)
+
 
         sqlitedb_file = save_folder / "realtime.db"
         self.engine = create_engine(f"sqlite:///{str(sqlitedb_file)}")
@@ -77,10 +81,10 @@ class RealtimeWatcher:
 
             routes.to_sql(name='routes', con=self.engine)
             trips.to_sql(name='trips', con=self.engine)
-            stops.to_sql(name='stops', con=self.engine)
+            stops.drop(columns='geometry').to_sql(name='stops', con=self.engine)
             stop_times.to_sql(name='stop_times', con=self.engine)
 
-            logger.debug("Saved static data")
+            self.logger.debug("Saved static data")
 
         insp = inspect(self.engine)
         for table in Base.metadata.tables.keys():
@@ -90,6 +94,11 @@ class RealtimeWatcher:
 
 
     def watch(self):
+        t = Thread(target=self._watch) 
+        t.start()
+        return t
+    
+    def _watch(self):
         self.logger.debug(f"Starting Realtime Tracking: {datetime.now()}")
         self.session = sessionmaker(bind=self.engine)()
         try:

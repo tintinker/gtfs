@@ -17,7 +17,7 @@ import networkx as nx
 import lib.util as util
 import shutil
 import logging
-from zipfile import ZipFile
+logging.basicConfig(level=logging.DEBUG)
 
 tqdm.pandas()
 
@@ -37,8 +37,10 @@ class Dataset:
         
         self.save_folder = Path(save_folder)
         self.save_folder.mkdir(exist_ok=True, parents=True)
-        logging.basicConfig(filename=str(self.save_folder / "dataset.log"), level=logging.DEBUG)
-        self.logger = logging.getLogger("dataset_builder")
+       
+        self.logger = logging.getLogger(f"dataset_builder [{save_folder}]")
+        handler = logging.FileHandler(save_folder / "dataset.log")
+        self.logger.addHandler(handler)
 
         self.name = name
         self.gtfs_source = gtfs_zip_filename

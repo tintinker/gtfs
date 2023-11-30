@@ -3,6 +3,8 @@ import random
 from lib.delay_dataset import DelayDataset
 from lib.realtime import RealtimeWatcher
 from lib.route_plan_dataset import RoutePlanDataset
+from threading import Thread
+import os
 
 if __name__ == "__main__":
     np.random.seed(42)
@@ -30,8 +32,18 @@ if __name__ == "__main__":
     # dataset = RoutePlanDataset("vancouver", "data/vancouver_gtfs.zip", save_folder="datasets/vancouver", include_census=False)
     # dataset.build()
 
-    realtime_watcher = RealtimeWatcher("data/cleveland/gtfs.zip", "", -5, "realtime/cleveland", "", resume_from_previous=False)
-    realtime_watcher.watch()
+    SF_API_KEY = os.environ["SFKEY"]
+    MIAMI_API_KEY = os.environ["MIAMIKEY"]
+
+    sf_watcher = RealtimeWatcher("data/sanfrancisco/sanfrancisco_gtfs.zip", "https://api.511.org/transit/tripupdates?agency=SF", -8, "realtime/sanfrancisco", api_key=SF_API_KEY, resuming_from_previous=False)
+    miami_watcher = RealtimeWatcher("data/miami/miami_gtfs.zip", "https://api.goswift.ly/real-time/miami/gtfs-rt-trip-updates", -5, "realtime/miami", api_key=MIAMI_API_KEY, resuming_from_previous=False)
+    philedelphia_watcher = RealtimeWatcher("data/philadelphia/philadelphia_gtfs.zip", "https://www3.septa.org/gtfsrt/septa-pa-us/Trip/rtTripUpdates.pb", -5, "realtime/philadelphia", resuming_from_previous=False)
+
+    threads = [sf_watcher.watch(), miami_watcher.watch(), philedelphia_watcher.watch()]
+    for t in threads:
+        t.join()
+
+    
 
 
 
