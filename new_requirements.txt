@@ -55,6 +55,7 @@ geojson
 geopandas
 geopy
 gtfs-functions
+gtfs-realtime-bindings
 huggingface-hub
 idna
 ipykernel
@@ -123,6 +124,7 @@ preshed
 prettytable
 prometheus-client
 prompt-toolkit
+protobuf
 psutil
 ptyprocess
 pure-eval
