@@ -29,7 +29,7 @@ class RoutePlanDataset(Dataset):
             with open(Path(self.save_folder / "original.busplanstate.json")) as f:
                 data = json.load(f)
             return BusPlanState("original", self.node_attributes, self.save_folder, from_json=data)
-        bps = BusPlanState.create_from_feed(self.feed, self.collapsed_stop_mapping, self.node_attributes, self.save_folder)
+        bps = BusPlanState.create_from_feed(self.gtfs_source, self.collapsed_stop_mapping, self.node_attributes, self.save_folder)
         bps.save()
         return bps
     
@@ -71,12 +71,11 @@ class RoutePlanDataset(Dataset):
             print()
 
     def get_route_from_points(self, bps: BusPlanState, origin: Point, destination: Point):
-        origin_stop_mask, _ = util.find_closest(origin, self.feed.stops.geometry, self.cosine_of_longitude)
-        origin_stop_idx = self.collapsed_stop_mapping[self.feed.stops.stop_id.loc[origin_stop_mask]]
+        origin_stop_mask, _ = util.find_closest(origin, self.stops_data.geometry, self.cosine_of_longitude)
+        origin_stop_idx = self.stops_data.index.loc[origin_stop_mask]
 
-        destination_stop_mask = util.find_all_within(destination, self.feed.stops.geometry, util.WALKING_DISTANCE_METERS, self.cosine_of_longitude)
-        destination_stops = self.feed.stops.stop_id.loc[destination_stop_mask] 
-        destination_stop_idxs = list(set(self.collapsed_stop_mapping[s] for s in destination_stops))
+        destination_stop_mask = util.find_all_within(destination, self.stops_data.geometry, util.WALKING_DISTANCE_METERS, self.cosine_of_longitude)
+        destination_stop_idxs = self.stops_data.index.loc[destination_stop_mask]
 
         return util.multisource_dijkstra(bps.G, destination_stop_idxs, origin_stop_idx, weight_function= lambda previous_edge, u,v: self.bus_route_weighting_function(bps, previous_edge, u,v))
 

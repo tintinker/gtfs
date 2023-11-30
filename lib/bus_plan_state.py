@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 from tqdm import tqdm
 import lib.util as util
-from gtfs_functions import Feed
 import pandas as pd
 import networkx as nx
 import numpy as np
@@ -176,9 +175,9 @@ class BusPlanState:
 
 
     @staticmethod
-    def create_from_feed(feed: Feed, collapsed_stop_mapping, node_attributes, save_folder):
-        routes = feed.routes
-        stop_times = feed.stop_times[['route_id', 'trip_id', 'stop_id', 'stop_sequence', 'departure_time']]
+    def create_from_feed(gtfs_zip_file, collapsed_stop_mapping, node_attributes, save_folder):
+        _, _, stop_times, routes = util.load_gtfs_zip(gtfs_zip_file)
+        stop_times = stop_times[['route_id', 'trip_id', 'stop_id', 'stop_sequence', 'departure_time']]
         first_departure_times = stop_times[stop_times.stop_sequence == 1].sort_values('departure_time')
         routes_frequencies_stops = [] #minutes between trips
         for route_id in tqdm(routes.route_id.unique()):

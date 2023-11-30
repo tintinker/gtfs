@@ -26,7 +26,7 @@ class DelayDataset(Dataset):
 
 
     def visualize(self, shp_folder = None, num_route_samples = 20):
-        all_unique_routes = list(self.feed.routes.route_id.unique())
+        all_unique_routes = list(self.routes.route_id.unique())
         routes = random.sample(all_unique_routes, min(num_route_samples, len(all_unique_routes)))
         
         view, ok = util.filter_graph(

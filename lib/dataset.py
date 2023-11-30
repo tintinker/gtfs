@@ -44,7 +44,7 @@ class Dataset:
 
         self.name = name
         self.gtfs_source = gtfs_zip_filename
-        self.stops_data, self.trips, self.stop_times, _ = util.load_gtfs_zip(gtfs_zip_filename)
+        self.stops_data, self.trips, self.stop_times, self.routes = util.load_gtfs_zip(gtfs_zip_filename)
        
 
         self.osm = OpenStreetMapsData(self.stops_data.stop_lat.min(), self.stops_data.stop_lon.min(), self.stops_data.stop_lat.max(), self.stops_data.stop_lon.max(), logger=self.logger)
