@@ -20,8 +20,8 @@ class RoutePlanDataset(Dataset):
         super().save(save_folder)
 
     
-    def build(self, override_if_already_built=False, save_folder: Union[str, Path] = None):
-        super()._build(override_if_already_built, save_folder)
+    def build(self, override_if_already_built = False, use_cache = True, save_folder: Union[str, Path] = None):
+        super()._build(override_if_already_built, use_cache, save_folder)
         self.built = True
     
     def get_original_bus_plan_state(self) -> BusPlanState:

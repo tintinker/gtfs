@@ -5,9 +5,10 @@ from shapely.geometry import Point
 
 
 class OpenStreetMapsData:
-    def __init__(self, north_lat, west_lng, south_lat, east_lng) -> None:
+    def __init__(self, north_lat, west_lng, south_lat, east_lng, logger=None) -> None:
         self.bbox = f"{north_lat},{west_lng},{south_lat},{east_lng}"
         self.api = overpass.API()
+        self.logger = logger
 
     def find_parks(self,return_geodataframe=True):
         query = f"""node["leisure"="park"]({self.bbox});"""
@@ -41,7 +42,7 @@ class OpenStreetMapsData:
         return self.find(amenity, query, return_geodataframe)
 
     def find(self, name, query, return_geodataframe=True):
-        tqdm.write("Performing OSM Query: " + query)
+        self._debug("Performing OSM Query: " + query)
         response = self.api.Get(query)
         
         results = []
@@ -57,6 +58,10 @@ class OpenStreetMapsData:
             return results
         
         return gpd.GeoDataFrame(results)
+    
+    def _debug(self, message):
+        self.logger.debug(message)
+        tqdm.write(message)
 
 
 
