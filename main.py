@@ -32,6 +32,9 @@ if __name__ == "__main__":
     # dataset = RoutePlanDataset("vancouver", "data/vancouver_gtfs.zip", save_folder="datasets/vancouver", include_census=False)
     # dataset.build()
 
+    dataset = RoutePlanDataset.load("datasets/new_orleans")
+    dataset2 = DelayDataset.load("datasets/sanfrancisco_delays")
+
     SF_API_KEY = os.environ["SFKEY"]
     MIAMI_API_KEY = os.environ["MIAMIKEY"]
 

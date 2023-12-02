@@ -39,7 +39,7 @@ class Dataset:
         self.save_folder.mkdir(exist_ok=True, parents=True)
        
         self.logger = logging.getLogger(f"dataset_builder [{save_folder}]")
-        handler = logging.FileHandler(save_folder / "dataset.log")
+        handler = logging.FileHandler(self.save_folder / "dataset.log")
         self.logger.addHandler(handler)
 
         self.name = name
