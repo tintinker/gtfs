@@ -8,7 +8,7 @@ import networkx as nx
 import heapq
 from urllib.parse import urlencode, urlparse, parse_qs
 from urllib.request import urlopen, Request
-
+import random
 
 SECONDS_TO_MINUTES = 60
 FIVE_HOURS_IN_MINUTES = 5 * 60
@@ -86,6 +86,7 @@ def visualize_route(node_pair_list, bps, node_attributes):
 def visualize_bps(bps, node_attributes):
     edges_data = []
     for u, v in bps.G.edges:
+
         line = LineString([
             (node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat']),
             (node_attributes.loc[v]['stop_lon'], node_attributes.loc[v]['stop_lat'])
@@ -96,7 +97,6 @@ def visualize_bps(bps, node_attributes):
                 'routes': bps.get_bus_routes_on_edge((u,v)),
                 'geometry': line
             })
-    
     current_color = 0
     edges_data[0]["color"] = COLORS[current_color]
     for i in range(1, len(edges_data)):
