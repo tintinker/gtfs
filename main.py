@@ -3,8 +3,18 @@ import random
 from lib.delay_dataset import DelayDataset
 from lib.realtime import RealtimeWatcher
 from lib.route_plan_dataset import RoutePlanDataset
+import lib.util as util
 from threading import Thread
 import os
+import contextily as ctx
+import matplotlib.pyplot as plt
+from shapely import Point
+
+def show(viz):
+    fig, ax = plt.subplots(figsize=(10, 8))
+    viz.plot(ax=ax, color=viz.color)
+    ctx.add_basemap(ax, crs='EPSG:4326', zoom=10)
+    plt.show()
 
 if __name__ == "__main__":
     np.random.seed(42)
@@ -33,6 +43,11 @@ if __name__ == "__main__":
     # dataset.build()
 
     dataset = RoutePlanDataset.load("datasets/new_orleans")
+    original_bus_plan_state = dataset.get_original_bus_plan_state()
+    print(original_bus_plan_state.stops_to_routes)
+    viz = util.visualize_bps(original_bus_plan_state, dataset.node_attributes)
+    show(viz)
+
     dataset2 = DelayDataset.load("datasets/sanfrancisco_delays")
 
     SF_API_KEY = os.environ["SFKEY"]
