@@ -41,7 +41,7 @@ def find_closest(origin: Point, options: gpd.GeoSeries, cosine_of_longitude: flo
 def approx_distance_in_meters(origin: Point, destination: Point, cosine_of_longitude: float):
     x_dist = cosine_of_longitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
     y_dist =  METERS_TO_DEGREE * np.abs(origin.y  - destination.y)
-    return np.sqrt(x_dist ** 2 + y_dist ** 2)
+    return np.sqrt(x_dist * x_dist + y_dist * y_dist)
 
 def approx_manhattan_distance_in_meters(origin: Point, destination: Point, cosine_of_longitude: float):
     x_dist = cosine_of_longitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)

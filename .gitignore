@@ -1,5 +1,4 @@
-realtime/
-config/api_keys/*
+realtime*
 data/
 .DS_Store
 __pycache__/
