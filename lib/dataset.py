@@ -48,7 +48,7 @@ class Dataset:
        
 
         self.osm = OpenStreetMapsData(self.stops_data.stop_lat.min(), self.stops_data.stop_lon.min(), self.stops_data.stop_lat.max(), self.stops_data.stop_lon.max(), logger=self.logger)
-        self.cosine_of_longitude = np.cos(self.stops_data.stop_lon.median()) * (180/np.pi)
+        self.cosine_latitude = np.cos(self.stops_data.stop_lat.median())
         
         self.include_census = include_census
         census_tables, census_groupings = census_tables_and_groupings

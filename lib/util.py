@@ -28,23 +28,23 @@ def export_json(d, filename):
         json.dump(d, f)
 
 
-def find_all_within(origin: Point, options: gpd.GeoSeries, distance_in_meters, cosine_of_longitude: float):
-    distances = options.apply(lambda d: approx_distance_in_meters(origin, d, cosine_of_longitude))
+def find_all_within(origin: Point, options, distance_in_meters, cosine_latitude: float):
+    distances = options.apply(lambda d: approx_distance_in_meters(origin, d, cosine_latitude))
     mask = distances <= distance_in_meters
     return mask
 
-def find_closest(origin: Point, options: gpd.GeoSeries, cosine_of_longitude: float):
-    distances = options.apply(lambda d: approx_distance_in_meters(origin, d, cosine_of_longitude))
+def find_closest(origin: Point, options, cosine_latitude: float):
+    distances = options.apply(lambda d: approx_distance_in_meters(origin, d, cosine_latitude))
     idx = np.argmin(distances)
     return idx, distances[idx]
 
-def approx_distance_in_meters(origin: Point, destination: Point, cosine_of_longitude: float):
-    x_dist = cosine_of_longitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
+def approx_distance_in_meters(origin: Point, destination: Point, cosine_latitude: float):
+    x_dist = cosine_latitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
     y_dist =  METERS_TO_DEGREE * np.abs(origin.y  - destination.y)
-    return np.sqrt(x_dist * x_dist + y_dist * y_dist)
+    return np.sqrt(x_dist ** 2 + y_dist ** 2)
 
-def approx_manhattan_distance_in_meters(origin: Point, destination: Point, cosine_of_longitude: float):
-    x_dist = cosine_of_longitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
+def approx_manhattan_distance_in_meters(origin: Point, destination: Point, cosine_latitude: float):
+    x_dist = cosine_latitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
     y_dist =  METERS_TO_DEGREE * np.abs(origin.y  - destination.y)
     return x_dist + y_dist
 
