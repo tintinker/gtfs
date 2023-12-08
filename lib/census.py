@@ -8,6 +8,8 @@ import geopandas as gpd
 from pathlib import Path
 import json
 
+
+
 class Table:
     def __init__(self, name, table_id, row, total_field):
         self.name = name
@@ -80,7 +82,9 @@ class Query:
     def get(self):
         dfs = []
         
-        for url_list in tqdm(list(self.get_batched_queries())):
+        all_batched_queries = list(self.get_batched_queries())
+        for i, url_list in enumerate(all_batched_queries):
+            self._debug(f"\n\n\n-------------------Query: [{i}/{len(all_batched_queries)}]\n--------------------------------\n")
             df = pd.DataFrame(columns=Query.GEO_FIELDS)
             for url in url_list:
                 self._debug(str(url))
@@ -113,13 +117,20 @@ class CensusData:
     DATA_SOURCE = "2021/acs/acs5"
     BLOCK_GROUP_YEAR = "2020"
 
-    def __init__(self, tables_file, groupings_file = None, geo_cache = "census_geo.cache", data_cache = "census_data.cache", logger=None):
+    def __init__(self, tables_file, groupings_file = None, geo_cache = "census_geo.cache", data_cache = "census_data.cache", census_boundaries_file = None, logger=None):
         self.tables_file = tables_file
         self.groupings_file = groupings_file
 
         self.tract_list = defaultdict(list)
         self.location_list = {}
         self.data = pd.DataFrame(columns=Query.GEO_FIELDS)
+
+        if census_boundaries_file:
+            self.census_boundaries_gdf = gpd.read_file(census_boundaries_file)
+            self.census_boundaries_spatial_index = self.census_boundaries_gdf.sindex
+        else:
+            self.census_boundaries_gdf = None
+            self.census_boundaries_spatial_index = None
 
         self.data_cache = data_cache
         self.geo_cache = geo_cache
@@ -147,7 +158,23 @@ class CensusData:
         with open(str(self.geo_cache), "w+") as f:
             json.dump(geo_data, f)
 
-    def location_request(self, latitude, longitude):
+    def fast_location_request(self, point):
+        possible_matches_index = list(self.census_boundaries_spatial_index.intersection(point.bounds))
+        possible_matches = self.census_boundaries_gdf.iloc[possible_matches_index]
+        precise_matches = possible_matches[possible_matches.intersects(point)]
+        
+        if precise_matches.empty:
+            return None
+        
+        match = precise_matches.iloc[0]
+        state_code = match["STATEFP"]
+        county_code = match["COUNTYFP"]
+        tract_code = match["TRACTCE"]
+        block_code = match["BLKGRPCE"]
+        return state_code, county_code, tract_code, block_code 
+    
+    def slow_location_request(self, point):
+        longitude, latitude = point.x, point.y
         response = requests.get(f"https://geo.fcc.gov/api/census/block/find?latitude={latitude}&longitude={longitude}&censusYear={CensusData.BLOCK_GROUP_YEAR}&format=json")
         data = response.json()
         state_code = data["Block"]["FIPS"][:2]
@@ -156,9 +183,15 @@ class CensusData:
         block_code = data["Block"]["FIPS"][11]
         return state_code, county_code, tract_code, block_code 
     
+        
+    
     def add_location(self, point: Point):
+        if self.census_boundaries_spatial_index is not None and self.census_boundaries_gdf is not None:
+            state_code, county_code, tract_code, block_code = self.fast_location_request(point)
+        else:
+            state_code, county_code, tract_code, block_code = self.slow_location_request(point)
+
         longitude, latitude = point.x, point.y
-        state_code, county_code, tract_code, block_code = self.location_request(latitude, longitude)
         self.tract_list[(state_code, county_code)].append(tract_code)
         self.location_list[(latitude, longitude)] = (state_code, county_code, tract_code, block_code[-1])
 

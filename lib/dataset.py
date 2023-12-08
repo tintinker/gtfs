@@ -25,7 +25,7 @@ SECONDS_TO_MINUTES = 60
 
 
 class Dataset:
-    def __init__(self, name, gtfs_zip_filename, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False, include_census=True):
+    def __init__(self, name, gtfs_zip_filename, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False, include_census=True, census_boundaries_file=None):
         if num_trip_samples % 2 == 0:
             assert Exception("num_trip_sampels must be odd number")
         
@@ -44,18 +44,16 @@ class Dataset:
 
         self.name = name
         self.gtfs_source = gtfs_zip_filename
-        self.stops_data, self.trips, self.stop_times, self.routes = util.load_gtfs_zip(gtfs_zip_filename)
-       
+        self.stops, self.trips, self.stop_times, self.routes = util.load_gtfs_zip(gtfs_zip_filename)
+        self.stops_data = self.stops.copy().set_index('stop_id')
 
         self.osm = OpenStreetMapsData(self.stops_data.stop_lat.min(), self.stops_data.stop_lon.min(), self.stops_data.stop_lat.max(), self.stops_data.stop_lon.max(), logger=self.logger)
         self.cosine_latitude = np.cos(self.stops_data.stop_lat.median())
         
         self.include_census = include_census
         census_tables, census_groupings = census_tables_and_groupings
-        self.census = CensusData(census_tables, census_groupings, geo_cache = self.save_folder / f"{name}_census_geo.cache", data_cache= self.save_folder / f"{name}_census_data.cache", logger=self.logger)
+        self.census = CensusData(census_tables, census_groupings, census_boundaries_file=census_boundaries_file, geo_cache = self.save_folder / f"{name}_census_geo.cache", data_cache= self.save_folder / f"{name}_census_data.cache", logger=self.logger)
         
-        self.min_distance_fields = []
-        self.collapsed_stop_mapping = {}
         self.nearby_stop_threshold = nearby_stop_threshold
         self.nearby_poi_threshold = nearby_poi_threshold
 
@@ -78,7 +76,6 @@ class Dataset:
             "gtfs_source": self.gtfs_source,
             "num_trip_samples": self.num_trip_samples,
             "poi_names": self.poi_names,
-            "collapsed_stop_mapping": self.collapsed_stop_mapping,
             "nearby_poi_threshold": self.nearby_poi_threshold,
             "nearby_stop_threshold": self.nearby_stop_threshold,
             "census_tables_file": self.census.tables_file,
@@ -104,17 +101,13 @@ class Dataset:
         with open(folder / "dataset_info.json") as f:
             dataset_info = json.load(f)
         
-        with open(folder / "collapsed_stop_mapping.json") as f:
-            collapsed_stop_mapping = json.load(f)
-        
         with open(folder / "graph.json") as f:
             graph = json.load(f)
         
         dataset = Dataset(dataset_info["name"], dataset_info["gtfs_source"], dataset_info["nearby_stop_threshold"], dataset_info["nearby_poi_threshold"], (dataset_info["census_tables_file"], dataset_info["census_groupings_file"]), dataset_info["num_trip_samples"], dataset_info["save_folder"], dataset_info["include_delay"], dataset_info["delay_sqlite_db_str"], dataset_info["delay_max"], dataset_info["built"])
         dataset.G = nx.node_link_graph(graph)
-        dataset.collapsed_stop_mapping = collapsed_stop_mapping
 
-        dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0)
+        dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0).drop_duplicates()
         dataset.node_attributes.geometry = dataset.node_attributes.geometry.apply(from_wkt)
         dataset.node_attributes = gpd.GeoDataFrame(dataset.node_attributes, geometry="geometry")
 
@@ -126,7 +119,7 @@ class Dataset:
             
         dataset.node_attributes.routes = dataset.node_attributes.routes.apply(load_route_list)
 
-        dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1])
+        dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1]).drop_duplicates()
         return dataset
    
     
@@ -141,9 +134,8 @@ class Dataset:
 
         util.export_json(self.info, folder / "dataset_info.json")
         util.export_json(nx.node_link_data(self.G), folder / "graph.json")
-        util.export_json(self.collapsed_stop_mapping, folder / "collapsed_stop_mapping.json")
-        self.node_attributes.to_csv(folder / "node_attribtes.csv")
-        self.edge_attriutes.to_csv(folder / "edge_attributes.csv")
+        self.node_attributes.drop_duplicates().to_csv(folder / "node_attribtes.csv")
+        self.edge_attriutes.drop_duplicates().to_csv(folder / "edge_attributes.csv")
         
         for file_path in folder.glob("*"):
             if file_path.is_file() and file_path.suffix == ".cache":
@@ -154,7 +146,7 @@ class Dataset:
         if self.built and not override_if_already_built:
             raise Exception("Dataset already built and override set to false. If you'd like to force a rebuild, set override to true")
         
-        with tqdm(total=5, desc="build progress") as pbar:
+        with tqdm(total=4, desc="build progress") as pbar:
             self._debug("\nStep 1: Downloading OSM Data")
             
             if use_cache:
@@ -165,30 +157,13 @@ class Dataset:
                 self._debug("Loaded OSM from cache")
             else:
                 self._download_osm_data()
+                self._apply_poi_thresholds()
                 self._to_json_cache("dataset_info", self.info)
                 self._to_csv_cache("osm_stops_data", self.stops_data)
             pbar.update(1)
-            
-            self._debug("\nStep 2: Collapsing Stops and Applying POI Thresholds")
-            
-            if use_cache:
-                collapsed_stop_mapping, mapping_ok = self._from_json_cache("collapsed_stop_mapping")
-                stops_data, stops_ok =  self._from_csv_cache("collapse_stops_data")
-
-            if use_cache and mapping_ok and stops_ok:
-                self.collapsed_stop_mapping = collapsed_stop_mapping
-                self.stops_data = stops_data
-                self._debug("Loaded Collapsed Stops from cache")
-            else:
-                self._collapse_stops()
-                self._apply_poi_thresholds()
-                self._to_json_cache("collapsed_stop_mapping", self.collapsed_stop_mapping)
-                self._to_csv_cache("collapse_stops_data", self.stops_data)
-            pbar.update(1)
-
 
             if self.include_census:
-                self._debug("\nStep 3: Adding Census Data")
+                self._debug("\nStep 2: Adding Census Data")
 
                 if use_cache:
                     stops_data, census_ok = self._from_csv_cache("all_stops_data")
@@ -203,7 +178,7 @@ class Dataset:
 
 
             if self.include_delay:
-                self._debug("\nStep 4: Adding Delay Data")
+                self._debug("\nStep 3: Adding Delay Data")
                 
                 if use_cache:
                     delay_df, delay_ok =  self._from_csv_cache("delay_df")
@@ -217,7 +192,7 @@ class Dataset:
             pbar.update(1)
 
 
-            self._debug("\nFinal Step: Linking Routes")
+            self._debug("\nStep 4: Linking Routes")
             self._link_routes()
             pbar.update(1)
             
@@ -226,8 +201,6 @@ class Dataset:
 
 
     def _download_osm_data(self):
-        self.min_distance_fields = []
-
         pois = [
             ("hospital", self.osm.find_hospitals()),
             ("grocery", self.osm.find_grocery_store()),
@@ -242,37 +215,7 @@ class Dataset:
 
         for poi_name, poi_gdf in tqdm(pois, desc="join osm data"):
             self._debug("joining data for: " + poi_name)
-            self.stops_data[f"closest_{poi_name}_distance"] = self.stops_data.geometry.apply(lambda p: util.find_closest(p, poi_gdf.geometry, self.cosine_of_longitude)[1])
-
-    def _collapse_stops(self):
-        self.collapsed_stop_mapping = {}
-        self.stops_data["nearby_stops"] = self.stops_data.progress_apply(lambda row: self.stops_data[util.find_all_within(row["geometry"], self.stops_data.geometry, self.nearby_stop_threshold, self.cosine_of_longitude)].stop_id.tolist(), axis=1)
-       
-        i = 0
-        with tqdm(total=len(self.stops_data), desc="removing duplicate stops") as pbar:
-            while i < len( self.stops_data):
-
-                mask = self.stops_data.stop_id.apply(lambda s: str(s) != str(self.stops_data.stop_id.iloc[i]) and str(s) not in self.collapsed_stop_mapping.values() and str(s) in map(str, self.stops_data.nearby_stops.iloc[i]))
-                data = self.stops_data[mask]
-                for poi_name in self.poi_names:
-                    self.stops_data[f"closest_{poi_name}_distance"].iloc[i] = np.min([self.stops_data[f"closest_{poi_name}_distance"].iloc[i]] + data[f"closest_{poi_name}_distance"].tolist())
-                for nb in self.stops_data.nearby_stops.iloc[i]:
-                    self.collapsed_stop_mapping[str(nb)] = str(self.stops_data.stop_id.iloc[i])
-
-                self.stops_data = self.stops_data[~mask]
-            
-                i += 1
-                pbar.n = i
-                pbar.total = len(self.stops_data)
-                pbar.refresh()
-        
-        self.stops_data = self.stops_data.reset_index()
-        
-        isolated_stops_map = {str(si):int(self.stops_data.index[self.stops_data.stop_id == si].values[0]) for si in self.stops_data.stop_id if si not in self.collapsed_stop_mapping}
-        value_to_value_map = {str(v):int(self.stops_data.index[self.stops_data.stop_id == v].values[0]) for (_,v) in self.collapsed_stop_mapping.items()}
-        self.collapsed_stop_mapping = {str(k): int(self.stops_data.index[self.stops_data.stop_id == v].values[0]) for (k,v) in self.collapsed_stop_mapping.items()}
-        self.collapsed_stop_mapping.update(value_to_value_map)
-        self.collapsed_stop_mapping.update(isolated_stops_map)
+            self.stops_data[f"closest_{poi_name}_distance"] = self.stops_data.geometry.apply(lambda p: util.find_closest(p, poi_gdf.geometry, self.cosine_latitude)[1])
 
     def _apply_poi_thresholds(self):
         for poi_name in tqdm(self.poi_names, desc="apply poi thresholds"):
@@ -303,73 +246,75 @@ class Dataset:
 
     def _link_routes(self):
         self.G = nx.DiGraph()
-        trips = self.trips
-        stop_times = self.stop_times
+        trips = self.trips.copy()
+        stop_times = self.stop_times.copy()
+        stops = self.stops.copy()
+
+        stop_times = stop_times.merge(trips[["trip_id","route_id"]], on="trip_id", how="left")
    
         sampled_trips = []
-        for route_id, group in trips.groupby('route_id'):
-            if len(group) >= self.num_trip_samples:
-                sampled_trips.extend(random.sample(group['trip_id'].tolist(), self.num_trip_samples))
-            else:
-                sampled_trips.extend(group['trip_id'].tolist())
+        stop_times.route_id = stop_times.route_id.astype(str)
+        for route_id in stop_times.route_id.unique():
+            sampled_trips.append(random.choice(stop_times.trip_id[stop_times.route_id == route_id].unique()))
+            
         
-        stop_times = stop_times.merge(trips[["trip_id","route_id"]], how="left")
-        
-        stop_times.index = stop_times.trip_id
-        stop_times = stop_times.loc[np.array(sampled_trips)]
+        stop_times = stop_times[stop_times.trip_id.isin(sampled_trips)]
+       
         edge_info = {}
-        stops_to_routes = defaultdict(list)
+        stops_to_routes = defaultdict(set)
 
-        for stop_idx in self.collapsed_stop_mapping.values():
+        for stop_idx in self.stops_data.index:
             self.G.add_node(stop_idx)
 
         for trip_id in tqdm(sampled_trips, desc="linking trips"):
-            trip_stop_times = stop_times[stop_times.trip_id == trip_id]
+            trip_stop_times = stop_times[stop_times.trip_id == trip_id].sort_values('stop_sequence').reset_index()
 
             if len(trip_stop_times) < 2:
                 continue
 
+            assert len(trip_stop_times.route_id.unique()) == 1
+            route_id = trip_stop_times.route_id.iloc[0]
+
             # Iterate through the stop times for the current trip
-            for _, row in tqdm(trip_stop_times.iterrows(),  total=len(trip_stop_times), leave=False):
-                stop_id = row['stop_id']
-                route_id = row['route_id']
+            for i in tqdm(range(1, len(trip_stop_times)), leave=False):
 
-               
-                next_stop = trip_stop_times[trip_stop_times['stop_sequence'] == row['stop_sequence'] + 1]
-                if not next_stop.empty:
-                    next_stop_id = next_stop['stop_id'].values[0]
+                stop_id = trip_stop_times.stop_id.iloc[i]
+                prev_stop_id = trip_stop_times.stop_id.iloc[i - 1]
 
-                    stop_idx = self.collapsed_stop_mapping[stop_id]
-                    next_stop_idx = self.collapsed_stop_mapping[next_stop_id]
+                if prev_stop_id == stop_id:
+                    continue
 
-                    if stop_idx == next_stop_idx:
-                        continue
+                cur_driving_time = (trip_stop_times.arrival_time.iloc[i] - trip_stop_times.departure_time.iloc[i - 1]) / SECONDS_TO_MINUTES
 
-                    cur_driving_time = (trip_stop_times.arrival_time[trip_stop_times.stop_sequence == row['stop_sequence'] + 1].iloc[0] - trip_stop_times.departure_time[trip_stop_times.stop_sequence == row['stop_sequence']].iloc[0]) / SECONDS_TO_MINUTES
-
-                    if not self.G.has_edge(stop_idx, next_stop_idx):
-                        self.G.add_edge(stop_idx, next_stop_idx)
-                        edge_info[(stop_idx, next_stop_idx)] = {
-                            "update_count": 1,
-                            "driving_time": cur_driving_time,
-                            "routes": [route_id]
-                        }
+                edge = (prev_stop_id, stop_id)
+                if not self.G.has_edge(*edge):
+                    self.G.add_edge(*edge)
+                    edge_info[edge] = {
+                        "update_count": 1,
+                        "driving_time": cur_driving_time,
+                        "routes": [route_id]
+                    }
                         
-                    else:
-                        update_count = edge_info[(stop_idx, next_stop_idx)]["update_count"]
-                        prev_driving_time = edge_info[(stop_idx, next_stop_idx)]["driving_time"]
-                        
-                        edge_info[(stop_idx, next_stop_idx)]["update_count"] = update_count + 1
-                        edge_info[(stop_idx, next_stop_idx)]["driving_time"] = (1/update_count) * cur_driving_time + (1 - 1/update_count) * prev_driving_time
-                        edge_info[(stop_idx, next_stop_idx)]["routes"].append(route_id)
-                        stops_to_routes[stop_idx].append(route_id)
-                        stops_to_routes[next_stop_idx].append(route_id) 
+                else:
+                    update_count = edge_info[edge]["update_count"]
+                    prev_driving_time = edge_info[edge]["driving_time"]
+                    
+                    edge_info[edge]["update_count"] = update_count + 1
+                    edge_info[edge]["driving_time"] = (1/update_count) * cur_driving_time + (1 - 1/update_count) * prev_driving_time
+                    edge_info[edge]["routes"].append(route_id)
+                    
+                    stops_to_routes[prev_stop_id].add(route_id)
+                    stops_to_routes[stop_idx].add(route_id) 
 
                     if self.include_delay:
-                        delay_info = self.delay_df[(self.delay_df.stop_id == next_stop_id) & (self.delay_df.trip_sequence == row['stop_sequence'] + 1)]
+                        delay_info = self.delay_df[(self.delay_df.stop_id == stop_id) & (self.delay_df.trip_sequence == trip_stop_times.stop_sequence.iloc[i])]
                         avg_delay = np.nan if delay_info.empty else delay_info.minute_delay.iloc[0]
-                        edge_info[(stop_idx, next_stop_idx)]["avg_delay"] = avg_delay
+                        edge_info[(prev_stop_id, stop_idx)]["avg_delay"] = avg_delay
 
+        for edge in edge_info:
+            edge_info[edge]["routes"] = tuple(edge_info[edge]["routes"])
+
+        stops_to_routes = {k:tuple(v) for k,v in stops_to_routes.items()}
         self.stops_data["routes"] = pd.Series(stops_to_routes)
         
         self.node_attributes = self.stops_data

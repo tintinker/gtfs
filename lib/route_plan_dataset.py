@@ -29,7 +29,7 @@ class RoutePlanDataset(Dataset):
             with open(Path(self.save_folder / "original.busplanstate.json")) as f:
                 data = json.load(f)
             return BusPlanState("original", self.node_attributes, self.save_folder, from_json=data)
-        bps = BusPlanState.create_from_feed(self.gtfs_source, self.collapsed_stop_mapping, self.node_attributes, self.save_folder)
+        bps = BusPlanState.create_from_feed(self.gtfs_source, self.node_attributes, self.save_folder)
         bps.save()
         return bps
     

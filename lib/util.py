@@ -8,7 +8,8 @@ import networkx as nx
 import heapq
 from urllib.parse import urlencode, urlparse, parse_qs
 from urllib.request import urlopen, Request
-import random
+import contextily as ctx
+import matplotlib.pyplot as plt
 
 SECONDS_TO_MINUTES = 60
 FIVE_HOURS_IN_MINUTES = 5 * 60
@@ -110,6 +111,17 @@ def visualize_bps(bps, node_attributes):
 
 def visualize_delay(subgraph: nx.Graph, node_attributes, edge_attributes):
     edges_data = []
+    nodes_data = []
+    for u in subgraph.nodes:
+        p = Point(node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat'])
+        nodes_data.append({
+            'from': node_attributes.loc[u]['stop_name'],
+                'to':  None,
+                'routes': [],
+                'avg_delay': np.nan,
+                'geometry': p,
+                'color': 'orange'
+            })
     for u, v in subgraph.edges:
         line = LineString([
             (node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat']),
@@ -120,10 +132,11 @@ def visualize_delay(subgraph: nx.Graph, node_attributes, edge_attributes):
                 'to':  node_attributes.loc[v]['stop_name'],
                 'routes': edge_attributes.loc[u,v]['routes'],
                 'avg_delay': edge_attributes.loc[u,v]['avg_delay'] if 'avg_delay' in edge_attributes else np.nan,
-                'geometry': line
+                'geometry': line,
+                'color': 'blue'
             })
-    gdf_edges = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
-    return gdf_edges
+    gdf = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
+    return gdf
 
 
 def multisource_dijkstra(G: nx.Graph, sources, target, weight_function: lambda prev_edge, u, v: None):
@@ -189,7 +202,7 @@ def format_req(url, key = None):
         return Request(url)
     
     parsed_url = urlparse(url)
-    query_parameters = {'api_key': key, 'token': key }
+    query_parameters = {'api_key': key, 'apiKey': key, 'token': key }
     existing_query_params = parse_qs(parsed_url.query)
     existing_query_params.update(query_parameters)
     new_query = urlencode(existing_query_params, doseq=True)
@@ -203,3 +216,12 @@ def seconds_since_midnight(dt):
     midnight = dt.replace(hour=0, minute=0, second=0, microsecond=0)
     delta = dt - midnight
     return delta.total_seconds()
+
+def show_viz(viz):
+    if "color" not in viz.columns:
+        viz["color"] = "blue"
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    viz.plot(ax=ax, color=viz.color)
+    ctx.add_basemap(ax, crs='EPSG:4326', zoom=10)
+    plt.show()

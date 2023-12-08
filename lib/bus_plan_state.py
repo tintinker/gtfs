@@ -118,12 +118,12 @@ class BusPlanState:
         with open(Path(self.save_folder) / (self.name + ".busplanstate.json"), "w+") as f:
             json.dump(data, f)
    
-    def add_stop_to_current_route(self, collapsed_stop_id):
-        if collapsed_stop_id not in self.node_index_list:
-            raise Exception(f"Couldn't find that stop: {collapsed_stop_id}")
+    def add_stop_to_current_route(self, stop_id):
+        if stop_id not in self.node_index_list:
+            raise Exception(f"Couldn't find that stop: {stop_id}")
         
-        self.routes_to_stops[self.current_route].append(collapsed_stop_id)
-        self.stops_to_routes[collapsed_stop_id].add(self.current_route)
+        self.routes_to_stops[self.current_route].append(stop_id)
+        self.stops_to_routes[stop_id].add(self.current_route)
 
         if len(self.routes_to_stops[self.current_route]) > 1:
             self.G.add_edge(self.routes_to_stops[self.current_route][-2], self.routes_to_stops[self.current_route][-1])
@@ -157,8 +157,8 @@ class BusPlanState:
             return 0
         return min([self.shortest_intervals[r] for r in routes])
 
-    def get_min_wait_time_at_stop(self, collapsed_stop_idx):
-        return min([self.shortest_intervals[r] for r in self.stops_to_routes[collapsed_stop_idx]])
+    def get_min_wait_time_at_stop(self, stop_id):
+        return min([self.shortest_intervals[r] for r in self.stops_to_routes[stop_id]])
     
     def get_avg_wait_time_for_route(self, route_id):
         return self.shortest_intervals[route_id]
@@ -172,7 +172,7 @@ class BusPlanState:
 
 
     @staticmethod
-    def create_from_feed(gtfs_zip_file, collapsed_stop_mapping, node_attributes, save_folder):
+    def create_from_feed(gtfs_zip_file, node_attributes, save_folder):
         shortest_intervals = {}
         routes_to_stops = defaultdict(list)
         stops_to_routes = defaultdict(set)
@@ -205,17 +205,17 @@ class BusPlanState:
             routes_to_stops[route_id] = []
             
             for i, row in stop_times[stop_times.trip_id == first_trip_id].sort_values("stop_sequence").iterrows():
-                collapsed_stop = collapsed_stop_mapping[row["stop_id"]]
+                stop_id = row["stop_id"]
                 stop_sequence = row["stop_sequence"]
 
                 shortest_intervals[route_id] = shortest_interval
-                if collapsed_stop not in routes_to_stops[route_id]:
-                    routes_to_stops[route_id].append(collapsed_stop)
+                if stop_id not in routes_to_stops[route_id]:
+                    routes_to_stops[route_id].append(stop_id)
 
                 if len(routes_to_stops[route_id]) > 1:
                     G.add_edge(routes_to_stops[route_id][-2], routes_to_stops[route_id][-1])
 
-                stops_to_routes[collapsed_stop].add(route_id)
+                stops_to_routes[stop_id].add(route_id)
                
 
         data = {

@@ -162,7 +162,3 @@ class RealtimeWatcher:
             self.logger.info("Closing session . . .")
             self.logger.debug(f"Ending Realtime Tracking: {datetime.now()}")
             self.session.close()
-
-if __name__ == "__main__":
-    realtime_watcher = RealtimeWatcher(gtfs_filename, realtime_url, timezone, save_folder, api_key, resume_from_previous)
-    realtime_watcher.watch()
