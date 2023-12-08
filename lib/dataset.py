@@ -118,6 +118,7 @@ class Dataset:
                 return []
             
         dataset.node_attributes.routes = dataset.node_attributes.routes.apply(load_route_list)
+        dataset.node_attributes = dataset.node_attributes.set_index("stop_id")
 
         dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1]).drop_duplicates()
         return dataset
