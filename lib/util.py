@@ -18,6 +18,7 @@ WALKING_DISTANCE_METERS = 400
 TRANSFER_PENALTY_MINUTES = 5
 STOP_PENALTY_MINUTES = 0.5
 DEFAULT_ROUTE_FREQUENCY_IN_MINS = 15
+NO_ROUTE_PENALTY = FIVE_HOURS_IN_MINUTES
 AVG_BUS_SPEED_METERS_PER_MIN = 833 #about 30mph
 
 METERS_TO_DEGREE = 111111 #https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
@@ -50,17 +51,17 @@ def find_closest(origin: Point, options, cosine_latitude: float):
     return idx, distances[idx]
 
 def approx_distance_in_meters(origin: Point, destination: Point, cosine_latitude: float):
-    x_dist = cosine_latitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
+    x_dist = np.abs(cosine_latitude) * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
     y_dist =  METERS_TO_DEGREE * np.abs(origin.y  - destination.y)
     return np.sqrt(x_dist ** 2 + y_dist ** 2)
 
 def approx_manhattan_distance_in_meters(origin: Point, destination: Point, cosine_latitude: float):
-    x_dist = cosine_latitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
+    x_dist = np.abs(cosine_latitude) * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
     y_dist =  METERS_TO_DEGREE * np.abs(origin.y  - destination.y)
     return x_dist + y_dist
 
 def approx_euclidean_distance_to_line(origin:Point, line1: Point, line2: Point, cosine_latitude: float):
-    scaled_y_difference = cosine_latitude * (origin.y - line1.y)
+    scaled_y_difference = np.abs(cosine_latitude) * (origin.y - line1.y)
     distance = np.sqrt((origin.x - line1.x)**2 + scaled_y_difference**2)
     
     # Check if the perpendicular projection is between the two line points
@@ -128,6 +129,57 @@ def visualize_bps(bps, node_attributes):
             current_color = (current_color + 1) % len(COLORS)
         edges_data[i]["color"] = COLORS[current_color]
 
+    gdf_edges = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
+    return gdf_edges
+
+
+def visualize_bps_diff(bps1, bps2, node_attributes):
+    edges_data = []
+    for u, v in bps1.G.edges:
+        line = LineString([
+            (node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat']),
+            (node_attributes.loc[v]['stop_lon'], node_attributes.loc[v]['stop_lat'])
+            ])
+        
+        color = 'blue' 
+        if not bps2.G.has_edge(u,v):
+            color = 'red'
+        else:
+            for route1 in  bps1.get_bus_routes_on_edge((u,v)):
+                for route2 in bps2.get_bus_routes_on_edge((u,v)):
+                    if route1 == route2 and bps1.shortest_intervals[route1] > bps2.shortest_intervals[route2]:
+                        color = 'orange'
+                        break
+                    elif route1 == route2 and bps1.shortest_intervals[route1] < bps2.shortest_intervals[route2]:
+                        color = 'purple'
+                        break
+                if color != 'blue':
+                    break
+
+        
+
+        edges_data.append({
+            'from': node_attributes.loc[u]['stop_name'],
+                'to':  node_attributes.loc[v]['stop_name'],
+                'routes': bps1.get_bus_routes_on_edge((u,v)),
+                'geometry': line,
+                'color': color
+            })
+        
+    for u, v in bps2.G.edges:
+        if bps1.G.has_edge(u,v):
+            continue
+        line = LineString([
+            (node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat']),
+            (node_attributes.loc[v]['stop_lon'], node_attributes.loc[v]['stop_lat'])
+            ])
+        edges_data.append({
+            'from': node_attributes.loc[u]['stop_name'],
+                'to':  node_attributes.loc[v]['stop_name'],
+                'routes': bps2.get_bus_routes_on_edge((u,v)),
+                'geometry': line,
+                'color': 'yellow'
+            })
     gdf_edges = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
     return gdf_edges
 
