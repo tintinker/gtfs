@@ -1,0 +1,23 @@
+
+Step 1: Downloading OSM Data
+Performing OSM Query: node["amenity"="hospital"](38.694263,-77.366072,39.155724,-76.720367);
+Performing OSM Query: node["shop"="supermarket"](38.694263,-77.366072,39.155724,-76.720367);
+Performing OSM Query: node["leisure"="park"](38.694263,-77.366072,39.155724,-76.720367);
+Performing OSM Query: node["amenity"="bar"](38.694263,-77.366072,39.155724,-76.720367);
+Performing OSM Query: node["amenity"="place_of_worship"](38.694263,-77.366072,39.155724,-76.720367);
+Performing OSM Query: node["brand"="McDonald's"](38.694263,-77.366072,39.155724,-76.720367);
+Performing OSM Query: node["brand"="Starbucks"](38.694263,-77.366072,39.155724,-76.720367);
+joining data for: hospital
+joining data for: grocery
+joining data for: park
+joining data for: bar
+joining data for: worship
+joining data for: mcdonalds
+joining data for: starbucks
+
+Step 2: Adding Census Data
+
+Step 1: Downloading OSM Data
+Loaded OSM from cache
+
+Step 2: Adding Census Data

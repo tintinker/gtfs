@@ -1,0 +1,19 @@
+
+Step 1: Downloading OSM Data
+Performing OSM Query: node["amenity"="hospital"](43.591811,-79.649908,43.909707,-79.123111);
+Performing OSM Query: node["shop"="supermarket"](43.591811,-79.649908,43.909707,-79.123111);
+Performing OSM Query: node["leisure"="park"](43.591811,-79.649908,43.909707,-79.123111);
+Performing OSM Query: node["amenity"="bar"](43.591811,-79.649908,43.909707,-79.123111);
+Performing OSM Query: node["amenity"="place_of_worship"](43.591811,-79.649908,43.909707,-79.123111);
+Performing OSM Query: node["brand"="McDonald's"](43.591811,-79.649908,43.909707,-79.123111);
+Performing OSM Query: node["brand"="Starbucks"](43.591811,-79.649908,43.909707,-79.123111);
+joining data for: hospital
+joining data for: grocery
+joining data for: park
+joining data for: bar
+joining data for: worship
+joining data for: mcdonalds
+joining data for: starbucks
+
+Step 4: Linking Routes
+Saved to datasets/toronto

@@ -84,7 +84,7 @@ class Query:
         
         all_batched_queries = list(self.get_batched_queries())
         for i, url_list in tqdm(enumerate(all_batched_queries)):
-            self._debug(f"\n\n\n-------------------Query: [{i}/{len(all_batched_queries)}]\n--------------------------------\n")
+            self._debug(f"\n\n-------------------\nQuery: [{i}/{len(all_batched_queries)}]\n--------------------------------\n")
             df = pd.DataFrame(columns=Query.GEO_FIELDS)
             for url in url_list:
                 self._debug(str(url))
@@ -186,10 +186,14 @@ class CensusData:
         
     
     def add_location(self, point: Point):
+        location_data = None
         if self.census_boundaries_spatial_index is not None and self.census_boundaries_gdf is not None:
-            state_code, county_code, tract_code, block_code = self.fast_location_request(point)
-        else:
-            state_code, county_code, tract_code, block_code = self.slow_location_request(point)
+            location_data = self.fast_location_request(point)
+        if not location_data:
+            location_data = self.slow_location_request(point)
+        if not location_data:
+            return
+        state_code, county_code, tract_code, block_code = location_data
 
         longitude, latitude = point.x, point.y
         self.tract_list[(state_code, county_code)].append(tract_code)
