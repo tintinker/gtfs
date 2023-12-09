@@ -108,7 +108,11 @@ class Dataset:
         dataset.G = nx.node_link_graph(graph)
 
         dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0, dtype=util.DATA_TYPES).drop_duplicates()
-        dataset.node_attributes =  dataset.node_attributes.set_index('stop_id', drop=False)
+        try:
+            dataset.node_attributes =  dataset.node_attributes.set_index('stop_id', drop=False)
+        except:
+            dataset.node_attributes["stop_id"] = dataset.node_attributes.index
+            
         dataset.node_attributes.geometry = dataset.node_attributes.geometry.apply(from_wkt)
         dataset.node_attributes = gpd.GeoDataFrame(dataset.node_attributes, geometry="geometry")
 
