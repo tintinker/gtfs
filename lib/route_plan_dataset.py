@@ -39,7 +39,7 @@ class RoutePlanDataset(Dataset):
         return BusPlanState(name, self.node_attributes, self.save_folder)
 
     def bus_route_weighting_function(self, bus_plan_state: BusPlanState, previous_edge, u, v):
-        driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_of_longitude) 
+        driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_latitude) 
         common_routes = bus_plan_state.get_routes_in_common(previous_edge, (u,v))
         requires_transfer = (len(common_routes) == 0)
         return (
@@ -55,7 +55,7 @@ class RoutePlanDataset(Dataset):
             u,v = node_pair_list[i]
             previous_edge = node_pair_list[i-1] if i > 0 else None
 
-            driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_of_longitude) 
+            driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_latitude) 
             common_routes = bus_plan_state.get_routes_in_common(previous_edge, (u,v))
             requires_transfer = (len(common_routes) == 0)
             slower_route_adjustment = min(0, bus_plan_state.get_overall_shortest_interval(common_routes) - bus_plan_state.get_min_wait_time_at_stop(u))
@@ -71,10 +71,10 @@ class RoutePlanDataset(Dataset):
             print()
 
     def get_route_from_points(self, bps: BusPlanState, origin: Point, destination: Point):
-        origin_stop_mask, _ = util.find_closest(origin, self.stops_data.geometry, self.cosine_of_longitude)
+        origin_stop_mask, _ = util.find_closest(origin, self.stops_data.geometry, self.cosine_latitude)
         origin_stop_idx = self.stops_data.index.loc[origin_stop_mask]
 
-        destination_stop_mask = util.find_all_within(destination, self.stops_data.geometry, util.WALKING_DISTANCE_METERS, self.cosine_of_longitude)
+        destination_stop_mask = util.find_all_within(destination, self.stops_data.geometry, util.WALKING_DISTANCE_METERS, self.cosine_latitude)
         destination_stop_idxs = self.stops_data.index.loc[destination_stop_mask]
 
         return util.multisource_dijkstra(bps.G, destination_stop_idxs, origin_stop_idx, weight_function= lambda previous_edge, u,v: self.bus_route_weighting_function(bps, previous_edge, u,v))
