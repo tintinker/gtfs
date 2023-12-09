@@ -1,11 +1,18 @@
-Adding Delay Data: realtime_dec7_12PT/cleveland
-Adding Delay Data: realtime_dec7_12PT/cleveland/realtime.db
-Adding Delay Data: realtime_dec7_12PT/cleveland/realtime.db
-Adding Delay Data: realtime_dec7_12PT/cleveland/realtime.db
-Adding Delay Data: realtime_dec7_12PT/cleveland/realtime.db
-Adding Delay Data: realtime_dec7_12PT/cleveland/realtime.db
-Adding Delay Data: realtime_dec7_12PT/cleveland/realtime.db
-Adding Delay Data: realtime_dec7_12PT/cleveland/realtime.db
-Re-linking routes
-Savin
-Could not copy over gtfs zip, skipping: [Errno 2] No such file or directory: 'datasets/cleveland_delays/gtfs.zip'
+
+Step 1: Downloading OSM Data
+Performing OSM Query: node["amenity"="hospital"](41.227828,-81.96736,41.637051,-81.437811);
+Performing OSM Query: node["shop"="supermarket"](41.227828,-81.96736,41.637051,-81.437811);
+Performing OSM Query: node["leisure"="park"](41.227828,-81.96736,41.637051,-81.437811);
+Performing OSM Query: node["amenity"="bar"](41.227828,-81.96736,41.637051,-81.437811);
+Performing OSM Query: node["amenity"="place_of_worship"](41.227828,-81.96736,41.637051,-81.437811);
+Performing OSM Query: node["brand"="McDonald's"](41.227828,-81.96736,41.637051,-81.437811);
+Performing OSM Query: node["brand"="Starbucks"](41.227828,-81.96736,41.637051,-81.437811);
+joining data for: hospital
+joining data for: grocery
+joining data for: park
+joining data for: bar
+joining data for: worship
+joining data for: mcdonalds
+joining data for: starbucks
+
+Step 2: Adding Census Data

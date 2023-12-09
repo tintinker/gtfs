@@ -26,7 +26,6 @@ class BusPlanState:
         else:
             self.current_route = 0
             self.shortest_intervals[self.current_route] = util.DEFAULT_ROUTE_FREQUENCY_IN_MINS
-        self.stops_to_routes = {int(k):v for k,v in self.stops_to_routes.items()}
 
     def __str__(self) -> str:
         return f"BusPlanState: {len(self.routes)} routes, {len(self.stops)} stops, graph: {self.G}"

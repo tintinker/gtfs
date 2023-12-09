@@ -45,7 +45,7 @@ class Dataset:
         self.name = name
         self.gtfs_source = gtfs_zip_filename
         self.stops, self.trips, self.stop_times, self.routes = util.load_gtfs_zip(gtfs_zip_filename)
-        self.stops_data = self.stops.copy().set_index('stop_id')
+        self.stops_data = self.stops.copy().set_index('stop_id', drop=False)
 
         self.osm = OpenStreetMapsData(self.stops_data.stop_lat.min(), self.stops_data.stop_lon.min(), self.stops_data.stop_lat.max(), self.stops_data.stop_lon.max(), logger=self.logger)
         self.cosine_latitude = np.cos(self.stops_data.stop_lat.median())
@@ -107,7 +107,8 @@ class Dataset:
         dataset = Dataset(dataset_info["name"], dataset_info["gtfs_source"], dataset_info["nearby_stop_threshold"], dataset_info["nearby_poi_threshold"], (dataset_info["census_tables_file"], dataset_info["census_groupings_file"]), dataset_info["num_trip_samples"], dataset_info["save_folder"], dataset_info["include_delay"], dataset_info["delay_sqlite_db_str"], dataset_info["delay_max"], dataset_info["built"])
         dataset.G = nx.node_link_graph(graph)
 
-        dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0).drop_duplicates()
+        dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0, dtype=util.DATA_TYPES).drop_duplicates()
+        dataset.node_attributes =  dataset.node_attributes.set_index('stop_id', drop=False)
         dataset.node_attributes.geometry = dataset.node_attributes.geometry.apply(from_wkt)
         dataset.node_attributes = gpd.GeoDataFrame(dataset.node_attributes, geometry="geometry")
 
@@ -118,9 +119,7 @@ class Dataset:
                 return []
             
         dataset.node_attributes.routes = dataset.node_attributes.routes.apply(load_route_list)
-        dataset.node_attributes = dataset.node_attributes.set_index("stop_id")
-
-        dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1]).drop_duplicates()
+        dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1], dtype=util.DATA_TYPES).drop_duplicates()
         return dataset
    
     
@@ -249,7 +248,6 @@ class Dataset:
         self.G = nx.DiGraph()
         trips = self.trips.copy()
         stop_times = self.stop_times.copy()
-        stops = self.stops.copy()
 
         stop_times = stop_times.merge(trips[["trip_id","route_id"]], on="trip_id", how="left")
    
@@ -305,7 +303,7 @@ class Dataset:
                     edge_info[edge]["routes"].append(route_id)
                     
                     stops_to_routes[prev_stop_id].add(route_id)
-                    stops_to_routes[stop_idx].add(route_id) 
+                    stops_to_routes[stop_id].add(route_id) 
 
                     if self.include_delay:
                         delay_info = self.delay_df[(self.delay_df.stop_id == stop_id) & (self.delay_df.trip_sequence == trip_stop_times.stop_sequence.iloc[i])]
@@ -340,7 +338,7 @@ class Dataset:
         if not Path(self.save_folder / (name + ".csv.cache")).is_file():
             return None, False
         
-        df = pd.read_csv(self.save_folder / (name + ".csv.cache"))
+        df = pd.read_csv(self.save_folder / (name + ".csv.cache"), dtype=util.DATA_TYPES)
         if "geometry" not in df.columns:
             return df, True
         

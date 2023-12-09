@@ -83,7 +83,7 @@ class Query:
         dfs = []
         
         all_batched_queries = list(self.get_batched_queries())
-        for i, url_list in enumerate(all_batched_queries):
+        for i, url_list in tqdm(enumerate(all_batched_queries)):
             self._debug(f"\n\n\n-------------------Query: [{i}/{len(all_batched_queries)}]\n--------------------------------\n")
             df = pd.DataFrame(columns=Query.GEO_FIELDS)
             for url in url_list:
