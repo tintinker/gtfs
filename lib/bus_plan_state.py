@@ -8,10 +8,11 @@ import networkx as nx
 import numpy as np
 
 class BusPlanState:
-    def __init__(self, name: str, node_attributes: pd.DataFrame, save_folder: str, from_json = None):
+    def __init__(self, name: str, node_attributes: pd.DataFrame, cosine_latitude: float, save_folder: str, from_json = None):
         self.name = name
         self.node_index_list = node_attributes.index.tolist()
         self.node_attributes = node_attributes
+        self.cosine_latitude = cosine_latitude
         self.save_folder = save_folder
         
         self.shortest_intervals = {}
@@ -116,7 +117,76 @@ class BusPlanState:
         }
         with open(Path(self.save_folder) / (self.name + ".busplanstate.json"), "w+") as f:
             json.dump(data, f)
+
+    def route_travel_time(self, route_id):
+        total_time = 0
+        for i in range(1, len(self.routes_to_stops[route_id])):
+            u = self.routes_to_stops[route_id][i - 1]
+            v = self.routes_to_stops[route_id][i]
+            driving_time = (1/util.AVG_BUS_SPEED_METERS_PER_MIN) * util.approx_manhattan_distance_in_meters(self.node_attributes.geometry.loc[u], self.node_attributes.geometry.loc[v], self.cosine_latitude) 
+            total_time += driving_time + util.STOP_PENALTY_MINUTES
+        return total_time
+    
+    @property
+    def total_bus_minutes(self):
+        total_time = 0
+        for route in self.routes_to_stops.keys():
+            number_of_trips = (24 * 60) / self.shortest_intervals[route]
+            travel_time = self.route_travel_time(route)
+            total_time += number_of_trips * travel_time
+        return total_time
    
+    @property
+    def valid(self):
+        return self._check_stops_routes_match() and self._check_routes_stops_match()
+         
+    def _check_stops_routes_match(self):
+        return set(self.stops_to_routes.keys()) == set(s for v in self.routes_to_stops.values() for s in v)
+    def _check_routes_stops_match(self):
+        return set(self.routes_to_stops.keys()) == set(r for v in self.stops_to_routes.values() for r in v) 
+
+
+
+    def replace_ith_stop_on_route(self, i, route_id, new_stop_id):
+        self.remove_ith_stop_on_route(i, route_id)
+        self.insert_ith_stop_on_route(i, route_id, new_stop_id)
+
+    def remove_ith_stop_on_route(self, i, route_id):
+        if i < 0 or i >= len(self.routes_to_stops[route_id]):
+            raise Exception(f"invalid index: {i}")
+        
+        old_stop_id = self.routes_to_stops[route_id][i]
+
+        if i > 0 and not (self.get_bus_routes_on_edge((self.routes_to_stops[route_id][i-1], old_stop_id)) - {route_id}):
+            self.G.remove_edge(self.routes_to_stops[route_id][i-1], old_stop_id)
+        if i + 1 < len(self.routes_to_stops[route_id]) and not (self.get_bus_routes_on_edge((old_stop_id, self.routes_to_stops[route_id][i+1])) - {route_id}):
+            self.G.remove_edge(old_stop_id, self.routes_to_stops[route_id][i+1])
+        
+        self.routes_to_stops[route_id].pop(i)
+        if old_stop_id not in self.routes_to_stops[route_id]:
+            self.stops_to_routes[old_stop_id].remove(route_id)
+            if not self.stops_to_routes[old_stop_id]:
+                del self.stops_to_routes[old_stop_id]
+
+    def insert_ith_stop_on_route(self, i, route_id, stop_id):
+        if i < 0 or i > len(self.routes_to_stops[route_id]):
+            raise Exception(f"invalid index: {i}")
+        if stop_id not in self.node_index_list:
+            raise Exception(f"Couldn't find that stop: {stop_id}")
+
+        if i == len(self.routes_to_stops[route_id]):
+            self.routes_to_stops[route_id].append(stop_id)
+        else:
+            self.routes_to_stops[route_id].insert(i, stop_id)
+
+        self.stops_to_routes[stop_id].add(route_id)
+
+        if i > 0 and not self.G.has_edge(self.routes_to_stops[route_id][i-1], stop_id):
+            self.G.add_edge(self.routes_to_stops[route_id][i-1], stop_id)
+        if i + 1 < len(self.routes_to_stops[route_id]) and not self.G.has_edge(stop_id, self.routes_to_stops[route_id][i+1]):
+            self.G.add_edge(stop_id, self.routes_to_stops[route_id][i+1])
+
+
     def add_stop_to_current_route(self, stop_id):
         if stop_id not in self.node_index_list:
             raise Exception(f"Couldn't find that stop: {stop_id}")
@@ -171,7 +241,7 @@ class BusPlanState:
 
 
     @staticmethod
-    def create_from_feed(gtfs_zip_file, node_attributes, save_folder):
+    def create_from_feed(gtfs_zip_file, node_attributes, cosine_latitude, save_folder):
         shortest_intervals = {}
         routes_to_stops = defaultdict(list)
         stops_to_routes = defaultdict(set)
@@ -188,12 +258,22 @@ class BusPlanState:
             for first_stop_id in route_times.stop_id.unique():
                 freq = route_times[route_times.stop_id == first_stop_id].departure_time.drop_duplicates().diff().median() / util.SECONDS_TO_MINUTES
                 first_trip_id = route_times[route_times.stop_id == first_stop_id].trip_id.iloc[0]
+                if np.isnan(freq):
+                    continue
                 frequency_by_origin.append((freq, first_trip_id, first_stop_id))
-            
+
             if not frequency_by_origin:
                 continue
+
+            frequency_by_origin = sorted(frequency_by_origin)
             
-            shortest_interval, first_trip_id, first_stop_id = min(frequency_by_origin)
+            shortest_interval, first_trip_id, first_stop_id = frequency_by_origin[len(frequency_by_origin) // 2]
+            if np.isnan(shortest_interval):
+                print(shortest_interval, first_trip_id, first_stop_id)
+                print(route_times)
+                print("applesauce oh no")
+                assert False
+
             first_trip_time = first_departure_times[(first_departure_times.route_id == route_id) & (first_departure_times.stop_id == first_stop_id)].departure_time.min() / util.SECONDS_TO_MINUTES
             last_trip_time = first_departure_times[(first_departure_times.route_id == route_id) & (first_departure_times.stop_id == first_stop_id)].departure_time.max() / util.SECONDS_TO_MINUTES
 
@@ -205,7 +285,6 @@ class BusPlanState:
             
             for i, row in stop_times[stop_times.trip_id == first_trip_id].sort_values("stop_sequence").iterrows():
                 stop_id = row["stop_id"]
-                stop_sequence = row["stop_sequence"]
 
                 shortest_intervals[route_id] = shortest_interval
                 if stop_id not in routes_to_stops[route_id]:
@@ -223,7 +302,7 @@ class BusPlanState:
             "stops_to_routes": {k:list(v) for k, v in stops_to_routes.items()},
             "graph": nx.node_link_data(G)
         }      
-        bps = BusPlanState("original", node_attributes, save_folder, from_json = data)
+        bps = BusPlanState("original", node_attributes, cosine_latitude, save_folder, from_json = data)
         return bps
 
    
