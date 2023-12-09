@@ -39,6 +39,11 @@ def find_all_within(origin: Point, options, distance_in_meters, cosine_latitude:
     mask = distances <= distance_in_meters
     return mask
 
+def find_all_near_line(line1: Point, line2:Point, options, distance_in_meters, cosine_latitude: float):
+    distances = options.apply(lambda d: approx_euclidean_distance_to_line(d, line1, line2, cosine_latitude))
+    mask = distances <= distance_in_meters
+    return mask
+
 def find_closest(origin: Point, options, cosine_latitude: float):
     distances = options.apply(lambda d: approx_distance_in_meters(origin, d, cosine_latitude))
     idx = np.argmin(distances)
@@ -53,6 +58,20 @@ def approx_manhattan_distance_in_meters(origin: Point, destination: Point, cosin
     x_dist = cosine_latitude * METERS_TO_DEGREE * np.abs(origin.x  - destination.x)
     y_dist =  METERS_TO_DEGREE * np.abs(origin.y  - destination.y)
     return x_dist + y_dist
+
+def approx_euclidean_distance_to_line(origin:Point, line1: Point, line2: Point, cosine_latitude: float):
+    scaled_y_difference = cosine_latitude * (origin.y - line1.y)
+    distance = np.sqrt((origin.x - line1.x)**2 + scaled_y_difference**2)
+    
+    # Check if the perpendicular projection is between the two line points
+    if (line1.x <= origin.x <= line2.x or line2.x <= origin.x <= line1.x) and (line1.y <= origin.y <= line2.y or line2.y <= origin.y <= line1.y):
+        return distance
+    else:
+        # If not, return the minimum distance to the two endpoints of the line
+        distance_to_point1 = np.sqrt((origin.x - line1.y)**2 + cosine_latitude*cosine_latitude*(origin.y - line1.y)**2)
+        distance_to_point2 = np.sqrt((origin.x - line2.y)**2 + cosine_latitude*cosine_latitude*(origin.y - line2.y)**2)
+        return min(distance_to_point1, distance_to_point2)
+
 
 def filter_graph(g: nx.Graph, filter_edge = lambda graph, source_node, destination_node: True, filter_node = lambda graph, node: True):
     view = nx.subgraph_view(g, filter_edge=lambda n1, n2: filter_edge(g, n1, n2))
