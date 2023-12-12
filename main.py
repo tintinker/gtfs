@@ -42,22 +42,68 @@ if __name__ == "__main__":
     # dataset = RoutePlanDataset("vancouver", "data/vancouver_gtfs.zip", save_folder="datasets/vancouver", include_census=False)
     # dataset.build()
 
-    dataset = RoutePlanDataset.load("datasets/new_orleans")
-    original_bus_plan_state = dataset.get_original_bus_plan_state()
-    print(original_bus_plan_state.stops_to_routes)
-    viz = util.visualize_bps(original_bus_plan_state, dataset.node_attributes)
-    show(viz)
+    # dataset = RoutePlanDataset.load("datasets/new_orleans")
+    # original_bus_plan_state = dataset.get_original_bus_plan_state()
+    # print(original_bus_plan_state.stops_to_routes)
+    # viz = util.visualize_bps(original_bus_plan_state, dataset.node_attributes)
+    # show(viz)
 
-    dataset2 = DelayDataset.load("datasets/sanfrancisco_delays")
+    # dataset2 = DelayDataset.load("datasets/sanfrancisco_delays")
 
-    SF_API_KEY = os.environ["SFKEY"]
-    MIAMI_API_KEY = os.environ["MIAMIKEY"]
+    SF_API_KEY = os.environ[""]
+    MIAMI_API_KEY = os.environ[""]
+    LA_API_KEY = os.environ[""]
+    NOLA_API_KEY = os.environ[""]
 
-    sf_watcher = RealtimeWatcher("data/sanfrancisco/sanfrancisco_gtfs.zip", "https://api.511.org/transit/tripupdates?agency=SF", -8, "realtime/sanfrancisco", api_key=SF_API_KEY, resuming_from_previous=False)
-    miami_watcher = RealtimeWatcher("data/miami/miami_gtfs.zip", "https://api.goswift.ly/real-time/miami/gtfs-rt-trip-updates", -5, "realtime/miami", api_key=MIAMI_API_KEY, resuming_from_previous=False)
-    philedelphia_watcher = RealtimeWatcher("data/philadelphia/philadelphia_gtfs.zip", "https://www3.septa.org/gtfsrt/septa-pa-us/Trip/rtTripUpdates.pb", -5, "realtime/philadelphia", resuming_from_previous=False)
+    sf_watcher = RealtimeWatcher(
+        "gtfs_data/2023_december/sanfrancisco_gtfs.zip", 
+        "https://api.511.org/transit/tripupdates?agency=SF", 
+        -8, "realtime/sanfrancisco", 
+        api_key=SF_API_KEY, 
+        resuming_from_previous=False
+        )
+    miami_watcher = RealtimeWatcher(
+        "gtfs_data/2023_december/miami_gtfs.zip", 
+        "https://api.goswift.ly/real-time/miami/gtfs-rt-trip-updates", 
+        -5, "realtime/miami", 
+        api_key=MIAMI_API_KEY, 
+        resuming_from_previous=False
+    )
+    la_watcher = RealtimeWatcher(
+        "gtfs_data/2023_december/la_gtfs.zip", 
+        "https://api.goswift.ly/real-time/lametro/gtfs-rt-trip-updates", 
+        -8, "realtime/la", 
+        api_key=LA_API_KEY, 
+        resuming_from_previous=False
+    )
+    philedelphia_watcher = RealtimeWatcher(
+        "gtfs_data/2023_december/philadelphia_gtfs.zip", 
+        "https://www3.septa.org/gtfsrt/septa-pa-us/Trip/rtTripUpdates.pb", 
+        -5, "realtime/philadelphia", 
+        resuming_from_previous=False
+    )
+    cleveland_watcher = RealtimeWatcher(
+        "gtfs_data/2023_december/cleveland_gtfs.zip", 
+        "https://gtfs-rt.gcrta.vontascloud.com/TMGTFSRealTimeWebService/TripUpdate/TripUpdates.pb", 
+        -5, "realtime/cleveland", 
+        resuming_from_previous=False
+    )
+    nola_watcher = RealtimeWatcher(
+        "data/miami/miami_gtfs.zip", 
+        "https://bustime.norta.com/gtfsrt/trips", 
+        -6, "realtime/new_orleans", 
+        api_key=NOLA_API_KEY, 
+        resuming_from_previous=False
+    )
 
-    threads = [sf_watcher.watch(), miami_watcher.watch(), philedelphia_watcher.watch()]
+    threads = [
+        sf_watcher.watch(),
+        miami_watcher.watch(), 
+        la_watcher.watch(),
+        philedelphia_watcher.watch(),
+        nola_watcher.watch(),
+        cleveland_watcher.watch()
+    ]
     for t in threads:
         t.join()
 
