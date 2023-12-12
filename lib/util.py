@@ -10,6 +10,7 @@ from urllib.parse import urlencode, urlparse, parse_qs
 from urllib.request import urlopen, Request
 import contextily as ctx
 import matplotlib.pyplot as plt
+from matplotlib.cm import plasma  
 
 SECONDS_TO_MINUTES = 60
 FIVE_HOURS_IN_MINUTES = 5 * 60
@@ -116,12 +117,18 @@ def visualize_bps(bps, node_attributes):
             (node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat']),
             (node_attributes.loc[v]['stop_lon'], node_attributes.loc[v]['stop_lat'])
             ])
+        routes =  bps.get_bus_routes_on_edge((u,v))
+        shortest_interval = min([bps.shortest_intervals[r] for r in routes])
+
         edges_data.append({
             'from': node_attributes.loc[u]['stop_name'],
                 'to':  node_attributes.loc[v]['stop_name'],
-                'routes': bps.get_bus_routes_on_edge((u,v)),
-                'geometry': line
+                'routes': routes,
+                'geometry': line,
+                'shortest_interval': shortest_interval,
+                'color_map_field': shortest_interval
             })
+        
     current_color = 0
     edges_data[0]["color"] = COLORS[current_color]
     for i in range(1, len(edges_data)):
@@ -287,11 +294,26 @@ def seconds_since_midnight(dt):
     delta = dt - midnight
     return delta.total_seconds()
 
-def show_viz(viz):
+def show_viz(viz, show=True, save_filename=None, markersize=5, xlabel=None, ylabel=None, title=None):
+    plt.clf()
+    fig, ax = plt.subplots(figsize=(10, 8))
     if "color" not in viz.columns:
         viz["color"] = "blue"
-
-    fig, ax = plt.subplots(figsize=(10, 8))
-    viz.plot(ax=ax, color=viz.color)
+    if "color_map_field" in viz.columns:
+        viz.plot(ax=ax, column='color_map_field', cmap='plasma', legend=True)
+    else :
+        viz.plot(ax=ax, color=viz.color, markersize=markersize)
     ctx.add_basemap(ax, crs='EPSG:4326', zoom=10)
-    plt.show()
+
+    if xlabel:
+        plt.xlabel(xlabel)
+    if ylabel:
+        plt.ylabel(ylabel)
+    if title:
+        plt.title(title)
+
+    
+    if show:
+        plt.show()
+    if save_filename:
+        plt.savefig(save_filename)

@@ -162,6 +162,10 @@ class BusPlanState:
         if i + 1 < len(self.routes_to_stops[route_id]) and not (self.get_bus_routes_on_edge((old_stop_id, self.routes_to_stops[route_id][i+1])) - {route_id}):
             self.G.remove_edge(old_stop_id, self.routes_to_stops[route_id][i+1])
         
+        if (i - 1) >= 0 and (i + 1) < len(self.routes_to_stops[route_id]) and not self.G.has_edge(self.routes_to_stops[route_id][i-1], self.routes_to_stops[route_id][i+1]):
+            self.G.add_edge(self.routes_to_stops[route_id][i-1], self.routes_to_stops[route_id][i+1])
+
+
         self.routes_to_stops[route_id].pop(i)
         if old_stop_id not in self.routes_to_stops[route_id]:
             self.stops_to_routes[old_stop_id].remove(route_id)
@@ -185,6 +189,11 @@ class BusPlanState:
             self.G.add_edge(self.routes_to_stops[route_id][i-1], stop_id)
         if i + 1 < len(self.routes_to_stops[route_id]) and not self.G.has_edge(stop_id, self.routes_to_stops[route_id][i+1]):
             self.G.add_edge(stop_id, self.routes_to_stops[route_id][i+1])
+        
+        # if (i - 1) >= 0 and (i + 1) < len(self.routes_to_stops[route_id]) and not (self.get_bus_routes_on_edge((self.routes_to_stops[route_id][i-1], self.routes_to_stops[route_id][i+1])) - {route_id}):
+        #     self.G.remove_edge(self.routes_to_stops[route_id][i-1], self.routes_to_stops[route_id][i+1])
+
+
 
 
     def add_stop_to_current_route(self, stop_id):

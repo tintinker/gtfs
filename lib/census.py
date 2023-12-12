@@ -73,11 +73,13 @@ class Query:
         self.tracts += [six_digit_tract]
 
     def __str__(self):
-        return f"https://api.census.gov/data/{self.census_data_source}?get={','.join([str(t) for t in self.tables])}&for=block%20group:*&in=state:{str(self.state_code).zfill(2)}&in=county:{str(self.county_code)}&in=tract:{','.join([str(t) for t in self.tracts])}"
+        tracts = list(set(self.tracts))
+        return f"https://api.census.gov/data/{self.census_data_source}?get={','.join([str(t) for t in self.tables])}&for=block%20group:*&in=state:{str(self.state_code).zfill(2)}&in=county:{str(self.county_code)}&in=tract:{','.join([str(t) for t in tracts])}"
     
     def get_batched_queries(self):
-        for i in range(0, len(self.tracts), 30):
-            yield [f"https://api.census.gov/data/{self.census_data_source}?get={','.join([str(t) for t in self.tables[j:j+30]])}&for=block%20group:*&in=state:{str(self.state_code).zfill(2)}&in=county:{str(self.county_code)}&in=tract:{','.join([str(t) for t in self.tracts[i:i+30]])}" for j in range(0, len(self.tables), 30)]
+        tracts = list(set(self.tracts))
+        for i in range(0, len(tracts), 30):
+            yield [f"https://api.census.gov/data/{self.census_data_source}?get={','.join([str(t) for t in self.tables[j:j+30]])}&for=block%20group:*&in=state:{str(self.state_code).zfill(2)}&in=county:{str(self.county_code)}&in=tract:{','.join([str(t) for t in tracts[i:i+30]])}" for j in range(0, len(self.tables), 30)]
 
     def get(self):
         dfs = []
