@@ -10,22 +10,22 @@ if __name__ == "__main__":
     np.random.seed(42)
     random.seed(42)
 
-    dataset = DelayDataset("sanfrancisco",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco_delay", include_delay=True, delay_sqlite_db_str="realtime/sanfrancisco/realtime.db", census_boundaries_file="census_boundaries_data/2021/california")
+    dataset = DelayDataset("sanfrancisco",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco_delay", include_delay=True, delay_sqlite_db_str="realtime/sanfrancisco/realtime.db", census_boundaries_file="census_boundaries_data/2021/California")
     dataset.build()
 
-    dataset = DelayDataset("miami",  "gtfs_data/2023_december/miami_gtfs.zip", save_folder="datasets/miami_delay", include_delay=True, delay_sqlite_db_str="realtime/miami/realtime.db", census_boundaries_file="census_boundaries_data/2021/florida")
+    dataset = DelayDataset("miami",  "gtfs_data/2023_december/miami_gtfs.zip", save_folder="datasets/miami_delay", include_delay=True, delay_sqlite_db_str="realtime/miami/realtime.db", census_boundaries_file="census_boundaries_data/2021/Florida")
     dataset.build()
 
-    dataset = DelayDataset("los_angeles",  "gtfs_data/2023_december/la_gtfs.zip", save_folder="datasets/los_angeles_delay", include_delay=True, delay_sqlite_db_str="realtime/la/realtime.db", census_boundaries_file="census_boundaries_data/2021/california")
+    dataset = DelayDataset("los_angeles",  "gtfs_data/2023_december/la_gtfs.zip", save_folder="datasets/los_angeles_delay", include_delay=True, delay_sqlite_db_str="realtime/la/realtime.db", census_boundaries_file="census_boundaries_data/2021/California")
     dataset.build()
 
-    dataset = DelayDataset("philadelphia",  "gtfs_data/2023_december/philadelphia_gtfs.zip", save_folder="datasets/philadelphia_delay", include_delay=True, delay_sqlite_db_str="realtime/philadelphia/realtime.db", census_boundaries_file="census_boundaries_data/2021/pennsylvania")
+    dataset = DelayDataset("philadelphia",  "gtfs_data/2023_december/philadelphia_gtfs.zip", save_folder="datasets/philadelphia_delay", include_delay=True, delay_sqlite_db_str="realtime/philadelphia/realtime.db", census_boundaries_file="census_boundaries_data/2021/Pennsylvania")
     dataset.build()
 
-    dataset = DelayDataset("cleveland",  "gtfs_data/2023_december/cleveland_gtfs.zip", save_folder="datasets/cleveland_delay", include_delay=True, delay_sqlite_db_str="realtime/cleveland/realtime.db", census_boundaries_file="census_boundaries_data/2021/ohio")
+    dataset = DelayDataset("cleveland",  "gtfs_data/2023_december/cleveland_gtfs.zip", save_folder="datasets/cleveland_delay", include_delay=True, delay_sqlite_db_str="realtime/cleveland/realtime.db", census_boundaries_file="census_boundaries_data/2021/Ohio")
     dataset.build()
 
-    dataset = DelayDataset("new_orleans",  "gtfs_data/2023_december/new_orleans_gtfs.zip", save_folder="datasets/new_orleans_delay", include_delay=True, delay_sqlite_db_str="realtime/new_orleans/realtime.db", census_boundaries_file="census_boundaries_data/2021/louisiana")
+    dataset = DelayDataset("new_orleans",  "gtfs_data/2023_december/new_orleans_gtfs.zip", save_folder="datasets/new_orleans_delay", include_delay=True, delay_sqlite_db_str="realtime/new_orleans/realtime.db", census_boundaries_file="census_boundaries_data/2021/Louisiana")
     dataset.build()
 
     # dataset = RoutePlanDataset("washington_dc", "data/dc_gtfs.zip", save_folder="datasets/washington_dc")
