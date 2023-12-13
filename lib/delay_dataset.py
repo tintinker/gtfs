@@ -18,16 +18,18 @@ class DelayDataset(Dataset):
         super()._build(override_if_already_built, use_cache, save_folder)
         self.built = True
     
-    def pyg_data(self, node_attribute_names, edge_attribute_names, exclude_edges = None):
+    def pyg_data(self, node_attribute_names, edge_attribute_names):
         graph_with_attrs = self.G.copy()
-        
+
         node_attributes = self.node_attributes.dropna(subset=node_attribute_names)
         edge_attributes = self.edge_attributes.dropna(subset=edge_attribute_names)
 
+        good_edges = self.edge_attributes[self.edge_attributes[edge_attribute_names].notna().all(axis=1)].index.tolist()
+        graph_with_attrs = graph_with_attrs.edge_subgraph(good_edges)
+
         nx.set_node_attributes(graph_with_attrs, node_attributes[node_attribute_names].to_dict(orient='index'))
         nx.set_edge_attributes(graph_with_attrs, edge_attributes[edge_attribute_names].to_dict(orient='index'))
-        if exclude_edges:
-            graph_with_attrs.remove_edges_from(exclude_edges)
+       
         
         return from_networkx(graph_with_attrs, node_attribute_names, edge_attribute_names)
 

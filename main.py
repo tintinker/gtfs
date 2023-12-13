@@ -11,12 +11,12 @@ if __name__ == "__main__":
     np.random.seed(42)
     random.seed(42)
 
-    dataset = DelayDataset.load("datasets/sanfrancisco_delay2")
+    dataset = DelayDataset.load("datasets/sanfrancisco_delay")
     chosen_node_features = ['stop_lat', 'stop_lon', 'near_starbucks', 'total_population','population_over_age_25', 'has_bachelors_degree_percent','income_to_poverty_under_200']
     chosen_edge_features = ['avg_delay','driving_time']
     print(dataset.pyg_data(node_attribute_names=chosen_node_features, edge_attribute_names=chosen_edge_features))
     
-    util.show_viz(dataset.visualize(".",len(dataset.routes.route_id.unique())))
+    util.show_viz(dataset.visualize(".", len(dataset.routes.route_id.unique())))
     # dataset = DelayDataset("sanfrancisco",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco_delay", include_delay=True, delay_sqlite_db_str="realtime_dec7_12PT/sanfrancisco/realtime.db", census_boundaries_file="census_boundaries_data/2021/California")
     # dataset.build()
 
