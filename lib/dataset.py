@@ -112,7 +112,7 @@ class Dataset:
             dataset.node_attributes =  dataset.node_attributes.set_index('stop_id', drop=False)
         except:
             dataset.node_attributes["stop_id"] = dataset.node_attributes.index
-            
+
         dataset.node_attributes.geometry = dataset.node_attributes.geometry.apply(from_wkt)
         dataset.node_attributes = gpd.GeoDataFrame(dataset.node_attributes, geometry="geometry")
 
@@ -243,7 +243,7 @@ class Dataset:
             'minute_delay': 'mean',
             'oid': 'max',
             'actual_arrival_time': ['max', 'min'],
-            'planned_arrival_time': ['max', 'min']}).reset_index()
+            'planned_arrival_seconds_since_midnight': ['max', 'min']}).reset_index()
 
         self.delay_df.columns = self.delay_df.columns.to_flat_index().map(lambda x: x[0]+"_"+x[1] if x[1] == 'max' or x[1] == 'min' else x[0])
         self.delay_df.minute_delay = self.delay_df.minute_delay.clip(0, self.delay_max)
@@ -266,8 +266,8 @@ class Dataset:
         edge_info = {}
         stops_to_routes = defaultdict(set)
 
-        for stop_idx in self.stops_data.index:
-            self.G.add_node(stop_idx)
+        for stop_id in self.stops_data.stop_id:
+            self.G.add_node(stop_id)
 
         for trip_id in tqdm(sampled_trips, desc="linking trips"):
             trip_stop_times = stop_times[stop_times.trip_id == trip_id].sort_values('stop_sequence').reset_index()
@@ -312,7 +312,7 @@ class Dataset:
                     if self.include_delay:
                         delay_info = self.delay_df[(self.delay_df.stop_id == stop_id) & (self.delay_df.trip_sequence == trip_stop_times.stop_sequence.iloc[i])]
                         avg_delay = np.nan if delay_info.empty else delay_info.minute_delay.iloc[0]
-                        edge_info[(prev_stop_id, stop_idx)]["avg_delay"] = avg_delay
+                        edge_info[(prev_stop_id, stop_id)]["avg_delay"] = avg_delay
 
         for edge in edge_info:
             edge_info[edge]["routes"] = tuple(edge_info[edge]["routes"])

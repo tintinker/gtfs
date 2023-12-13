@@ -1,4 +1,3 @@
-
 import numpy as np
 from lib.bus_plan_state import BusPlanState
 import lib.util as util
