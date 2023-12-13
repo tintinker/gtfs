@@ -92,7 +92,7 @@ class Dataset:
     
     @property
     def all_edge_attribute_names(self):
-        return list(self.edge_attriutes.columns)
+        return list(self.edge_attributes.columns)
     
     @staticmethod
     def load(folder: Union[str, Path]):
@@ -123,7 +123,7 @@ class Dataset:
                 return []
             
         dataset.node_attributes.routes = dataset.node_attributes.routes.apply(load_route_list)
-        dataset.edge_attriutes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1], dtype=util.DATA_TYPES).drop_duplicates()
+        dataset.edge_attributes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1], dtype=util.DATA_TYPES).drop_duplicates()
         return dataset
    
     
@@ -139,7 +139,7 @@ class Dataset:
         util.export_json(self.info, folder / "dataset_info.json")
         util.export_json(nx.node_link_data(self.G), folder / "graph.json")
         self.node_attributes.drop_duplicates().to_csv(folder / "node_attribtes.csv")
-        self.edge_attriutes.drop_duplicates().to_csv(folder / "edge_attributes.csv")
+        self.edge_attributes.drop_duplicates().to_csv(folder / "edge_attributes.csv")
         
         for file_path in folder.glob("*"):
             if file_path.is_file() and file_path.suffix == ".cache":
@@ -321,7 +321,7 @@ class Dataset:
         self.stops_data["routes"] = pd.Series(stops_to_routes)
         
         self.node_attributes = self.stops_data
-        self.edge_attriutes = pd.DataFrame(edge_info.values(), index=pd.MultiIndex.from_tuples(edge_info.keys()))
+        self.edge_attributes = pd.DataFrame(edge_info.values(), index=pd.MultiIndex.from_tuples(edge_info.keys()))
 
 
     def _to_json_cache(self, name, obj):

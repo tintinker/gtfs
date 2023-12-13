@@ -194,28 +194,19 @@ def visualize_bps_diff(bps1, bps2, node_attributes):
 def visualize_delay(subgraph: nx.Graph, node_attributes, edge_attributes):
     edges_data = []
     nodes_data = []
-    for u in subgraph.nodes:
-        p = Point(node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat'])
-        nodes_data.append({
-            'from': node_attributes.loc[u]['stop_name'],
-                'to':  None,
-                'routes': [],
-                'avg_delay': np.nan,
-                'geometry': p,
-                'color': 'orange'
-            })
     for u, v in subgraph.edges:
         line = LineString([
             (node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat']),
             (node_attributes.loc[v]['stop_lon'], node_attributes.loc[v]['stop_lat'])
             ])
+        avg_delay = edge_attributes.loc[u,v]['avg_delay'] if 'avg_delay' in edge_attributes else np.nan
         edges_data.append({
             'from': node_attributes.loc[u]['stop_name'],
                 'to':  node_attributes.loc[v]['stop_name'],
                 'routes': edge_attributes.loc[u,v]['routes'],
-                'avg_delay': edge_attributes.loc[u,v]['avg_delay'] if 'avg_delay' in edge_attributes else np.nan,
+                'avg_delay': avg_delay,
                 'geometry': line,
-                'color': 'blue'
+                'color_map_field': avg_delay,
             })
     gdf = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
     return gdf

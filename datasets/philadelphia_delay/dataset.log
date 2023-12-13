@@ -1,0 +1,11 @@
+
+Step 1: Downloading OSM Data
+Performing OSM Query: node["amenity"="hospital"](39.812254,-75.834693,40.334014,-74.754202);
+Performing OSM Query: node["shop"="supermarket"](39.812254,-75.834693,40.334014,-74.754202);
+Performing OSM Query: node["leisure"="park"](39.812254,-75.834693,40.334014,-74.754202);
+Performing OSM Query: node["amenity"="bar"](39.812254,-75.834693,40.334014,-74.754202);
+Performing OSM Query: node["amenity"="place_of_worship"](39.812254,-75.834693,40.334014,-74.754202);
+Performing OSM Query: node["brand"="McDonald's"](39.812254,-75.834693,40.334014,-74.754202);
+Performing OSM Query: node["brand"="Starbucks"](39.812254,-75.834693,40.334014,-74.754202);
+joining data for: hospital
+joining data for: grocery
