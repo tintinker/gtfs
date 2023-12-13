@@ -42,6 +42,7 @@ def preferred_old_stop_idx(self, route, old_stop_pref):
 def choose_new_stop(self, route, old_stop_idx, new_stop_pref):
     radius_meters = new_stop_pref
     nearby_stops = self.bps.node_attributes[util.find_all_within(self.bps.node_attributes.geometry.loc[old_stop_idx], self.bps.node_attributes.geometry, radius_meters, self.bps.cosine_latitude)].index
+    
 
 class SimpleEnvironment:
     def __init__(self, num_states):

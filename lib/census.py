@@ -117,7 +117,7 @@ class Query:
 
 class CensusData:
     DATA_SOURCE = "2021/acs/acs5"
-    BLOCK_GROUP_YEAR = "2020"
+    BLOCK_GROUP_YEAR = "2021"
 
     def __init__(self, tables_file, groupings_file = None, geo_cache = "census_geo.cache", data_cache = "census_data.cache", census_boundaries_file = None, logger=None):
         self.tables_file = tables_file

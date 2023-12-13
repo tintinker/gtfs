@@ -17,22 +17,7 @@ class QNetwork(nn.Module):
         q_value = self.output_layer(x)
         return q_value
 
-class SimpleEnvironment:
-    def __init__(self, num_states):
-        self.num_states = num_states
-        self.current_state = 0
 
-    def step(self, action):
-        # Assuming a cyclic transition through states every 10 episodes
-        self.current_state = (self.current_state + 1) % self.num_states
-
-        # For simplicity, assume a reward of 1 when reaching the last state
-        reward = 1.0 if self.current_state == self.num_states - 1 else 0.0
-
-        # For simplicity, assume the episode ends after reaching the last state
-        done = (self.current_state == self.num_states - 1)
-
-        return torch.FloatTensor([self.current_state]), reward, done
 
 class DeepQAgent:
     def __init__(self, action_dim, exploration_coefficient=1.0, learning_rate=0.001, gamma=0.99):
