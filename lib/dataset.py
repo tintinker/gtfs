@@ -142,7 +142,8 @@ class Dataset:
         util.export_json(nx.node_link_data(self.G), folder / "graph.json")
         self.node_attributes.drop_duplicates().to_csv(folder / "node_attribtes.csv")
         self.edge_attributes.drop_duplicates().to_csv(folder / "edge_attributes.csv")
-        
+        self.delay_df.drop_duplicates().to_csv(folder / "delay.csv")
+
         for file_path in folder.glob("*"):
             if file_path.is_file() and file_path.suffix == ".cache":
                 file_path.unlink() 

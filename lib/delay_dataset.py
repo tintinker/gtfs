@@ -6,6 +6,9 @@ import os
 import lib.util as util
 from torch_geometric.utils import from_networkx
 import networkx as nx
+import numpy as np
+from shapely import Point, LineString
+import geopandas as gpd
 
 class DelayDataset(Dataset):
     @staticmethod
@@ -33,24 +36,37 @@ class DelayDataset(Dataset):
         
         return from_networkx(graph_with_attrs, node_attribute_names, edge_attribute_names)
 
+    def add_predictions(self, df):
+        self.edge_attributes = self.edge_attributes.merge(df, how="left")
 
-    def visualize(self, shp_folder = None, num_route_samples = 20):
-        all_unique_routes = list(self.routes.route_id.unique())
-        routes = random.sample(all_unique_routes, min(num_route_samples, len(all_unique_routes)))
-        
-        view, ok = util.filter_graph(
-            self.G, 
-            filter_edge = lambda g, u_node, v_node: set(self.edge_attributes.loc[u_node, v_node]["routes"]).intersection(routes), 
-            filter_node = lambda g, node: g.degree[node] > 0
-            )
+    def visualize(self, feature="avg_delay", shp_folder = None):        
+        good_edges = self.edge_attributes[self.edge_attributes[feature].notna()].index.tolist()
+        subgraph = self.G.edge_subgraph(good_edges)
 
-        routes_viz = util.visualize_delay(view, self.node_attributes, self.edge_attributes)
+        edges_data = []
+        for u, v in subgraph.edges:
+            line = LineString([
+                (self.node_attributes.loc[u]['stop_lon'], self.node_attributes.loc[u]['stop_lat']),
+                (self.node_attributes.loc[v]['stop_lon'], self.node_attributes.loc[v]['stop_lat'])
+                ])
+            values = self.edge_attributes.loc[u,v][feature] if feature in self.edge_attributes else np.nan
+            
+            edges_data.append({
+                'from': self.node_attributes.loc[u]['stop_name'],
+                    'to':  self.node_attributes.loc[v]['stop_name'],
+                    'routes': self.edge_attributes.loc[u,v]['routes'],
+                    feature: values,
+                    'geometry': line,
+                    'color_map_field': values,
+                })
+        gdf = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
 
         if shp_folder:
-            routes_viz.routes = routes_viz.routes.apply(lambda r: ','.join(map(str, r)))
-            routes_viz.to_file(os.path.join(shp_folder, "routes_viz.shp"))
+            gdf.routes = gdf.routes.apply(lambda r: ','.join(map(str, r)))
+            gdf.to_file(os.path.join(shp_folder, "viz.shp"))
 
-        
-        return routes_viz
+        return gdf
+
+       
     
     

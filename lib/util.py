@@ -198,29 +198,7 @@ def visualize_bps_diff(bps1, bps2, node_attributes):
                 'color': 'yellow'
             })
     gdf_edges = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
-    return gdf_edges
-
-
-def visualize_delay(subgraph: nx.Graph, node_attributes, edge_attributes):
-    edges_data = []
-    nodes_data = []
-    for u, v in subgraph.edges:
-        line = LineString([
-            (node_attributes.loc[u]['stop_lon'], node_attributes.loc[u]['stop_lat']),
-            (node_attributes.loc[v]['stop_lon'], node_attributes.loc[v]['stop_lat'])
-            ])
-        avg_delay = edge_attributes.loc[u,v]['avg_delay'] if 'avg_delay' in edge_attributes else np.nan
-        edges_data.append({
-            'from': node_attributes.loc[u]['stop_name'],
-                'to':  node_attributes.loc[v]['stop_name'],
-                'routes': edge_attributes.loc[u,v]['routes'],
-                'avg_delay': avg_delay,
-                'geometry': line,
-                'color_map_field': avg_delay,
-            })
-    gdf = gpd.GeoDataFrame(edges_data, crs="EPSG:4326")
-    return gdf
-
+    return gdf_edges    
 
 def multisource_dijkstra(G: nx.Graph, sources, target, weight_function: lambda prev_edge, u, v: None):
     distances = {node: np.inf for node in G.nodes}
