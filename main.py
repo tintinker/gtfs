@@ -3,29 +3,30 @@ import random
 from lib.delay_dataset import DelayDataset
 from lib.realtime import RealtimeWatcher
 from lib.route_plan_dataset import RoutePlanDataset
-import lib.util as util
-from threading import Thread
-import os
 import contextily as ctx
 import matplotlib.pyplot as plt
-from shapely import Point
-
-def show(viz):
-    fig, ax = plt.subplots(figsize=(10, 8))
-    viz.plot(ax=ax, color=viz.color)
-    ctx.add_basemap(ax, crs='EPSG:4326', zoom=10)
-    plt.show()
 
 if __name__ == "__main__":
     np.random.seed(42)
     random.seed(42)
-    #https://colab.research.google.com/drive/10Mnw3CPGYQl5Qs40SkT1cM8KagXb-Lwx#
 
-    # dataset = RoutePlanDataset("cleveland", "data/cleveland/gtfs.zip", save_folder="datasets/cleveland")
-    # dataset.build()
+    dataset = DelayDataset("sanfrancisco",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco_delay", include_delay=True, delay_sqlite_db_str="realtime/sanfrancisco/realtime.db")
+    dataset.build()
 
-    # dataset = DelayDataset("sanfrancisco", "data/sanfrancisco/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco_delays", include_delay=True, delay_sqlite_db_str="data/sanfrancisco/sanfrancisco.db")
-    # dataset.build()
+    dataset = DelayDataset("miami",  "gtfs_data/2023_december/miami_gtfs.zip", save_folder="datasets/miami_delay", include_delay=True, delay_sqlite_db_str="realtime/miami/realtime.db")
+    dataset.build()
+
+    dataset = DelayDataset("la",  "gtfs_data/2023_december/la_gtfs.zip", save_folder="datasets/los_angeles_delay", include_delay=True, delay_sqlite_db_str="realtime/la/realtime.db")
+    dataset.build()
+
+    dataset = DelayDataset("philadelphia",  "gtfs_data/2023_december/philadelphia_gtfs.zip", save_folder="datasets/philadelphia_delay", include_delay=True, delay_sqlite_db_str="realtime/philadelphia/realtime.db")
+    dataset.build()
+
+    dataset = DelayDataset("cleveland",  "gtfs_data/2023_december/cleveland_gtfs.zip", save_folder="datasets/cleveland_delay", include_delay=True, delay_sqlite_db_str="realtime/cleveland/realtime.db")
+    dataset.build()
+
+    dataset = DelayDataset("new_orleans",  "gtfs_data/2023_december/new_orleans_gtfs.zip", save_folder="datasets/new_orleans_delay", include_delay=True, delay_sqlite_db_str="realtime/new_orleans/realtime.db")
+    dataset.build()
 
     # dataset = RoutePlanDataset("washington_dc", "data/dc_gtfs.zip", save_folder="datasets/washington_dc")
     # dataset.build()
@@ -41,71 +42,59 @@ if __name__ == "__main__":
 
     # dataset = RoutePlanDataset("vancouver", "data/vancouver_gtfs.zip", save_folder="datasets/vancouver", include_census=False)
     # dataset.build()
+    # from secret import SF_API_KEY, MIAMI_API_KEY, LA_API_KEY, NOLA_API_KEY
+    
+    # sf_watcher = RealtimeWatcher(
+    #     "gtfs_data/2023_december/sanfrancisco_gtfs.zip", 
+    #     "https://api.511.org/transit/tripupdates?agency=SF", 
+    #     -8, "realtime/sanfrancisco", 
+    #     api_key=SF_API_KEY, 
+    #     resuming_from_previous=True
+    #     )
+    # miami_watcher = RealtimeWatcher(
+    #     "gtfs_data/2023_december/miami_gtfs.zip", 
+    #     "https://api.goswift.ly/real-time/miami/gtfs-rt-trip-updates", 
+    #     -5, "realtime/miami", 
+    #     api_key=MIAMI_API_KEY, 
+    #     resuming_from_previous=True
+    # )
+    # la_watcher = RealtimeWatcher(
+    #     "gtfs_data/2023_december/la_gtfs.zip", 
+    #     "https://api.goswift.ly/real-time/lametro/gtfs-rt-trip-updates", 
+    #     -8, "realtime/la", 
+    #     api_key=LA_API_KEY, 
+    #     resuming_from_previous=True
+    # )
+    # philedelphia_watcher = RealtimeWatcher(
+    #     "gtfs_data/2023_december/philadelphia_gtfs.zip", 
+    #     "https://www3.septa.org/gtfsrt/septa-pa-us/Trip/rtTripUpdates.pb", 
+    #     -5, "realtime/philadelphia", 
+    #     resuming_from_previous=True
+    # )
+    # cleveland_watcher = RealtimeWatcher(
+    #     "gtfs_data/2023_december/cleveland_gtfs.zip", 
+    #     "https://gtfs-rt.gcrta.vontascloud.com/TMGTFSRealTimeWebService/TripUpdate/TripUpdates.pb", 
+    #     -5, "realtime/cleveland", 
+    #     resuming_from_previous=True
+    # )
+    # nola_watcher = RealtimeWatcher(
+    #     "gtfs_data/2023_december/new_orleans_gtfs.zip", 
+    #     "https://bustime.norta.com/gtfsrt/trips", 
+    #     -6, "realtime/new_orleans", 
+    #     api_key=NOLA_API_KEY, 
+    #     resuming_from_previous=True
+    # )
 
-    # dataset = RoutePlanDataset.load("datasets/new_orleans")
-    # original_bus_plan_state = dataset.get_original_bus_plan_state()
-    # print(original_bus_plan_state.stops_to_routes)
-    # viz = util.visualize_bps(original_bus_plan_state, dataset.node_attributes)
-    # show(viz)
-
-    # dataset2 = DelayDataset.load("datasets/sanfrancisco_delays")
-
-    SF_API_KEY = os.environ[""]
-    MIAMI_API_KEY = os.environ[""]
-    LA_API_KEY = os.environ[""]
-    NOLA_API_KEY = os.environ[""]
-
-    sf_watcher = RealtimeWatcher(
-        "gtfs_data/2023_december/sanfrancisco_gtfs.zip", 
-        "https://api.511.org/transit/tripupdates?agency=SF", 
-        -8, "realtime/sanfrancisco", 
-        api_key=SF_API_KEY, 
-        resuming_from_previous=False
-        )
-    miami_watcher = RealtimeWatcher(
-        "gtfs_data/2023_december/miami_gtfs.zip", 
-        "https://api.goswift.ly/real-time/miami/gtfs-rt-trip-updates", 
-        -5, "realtime/miami", 
-        api_key=MIAMI_API_KEY, 
-        resuming_from_previous=False
-    )
-    la_watcher = RealtimeWatcher(
-        "gtfs_data/2023_december/la_gtfs.zip", 
-        "https://api.goswift.ly/real-time/lametro/gtfs-rt-trip-updates", 
-        -8, "realtime/la", 
-        api_key=LA_API_KEY, 
-        resuming_from_previous=False
-    )
-    philedelphia_watcher = RealtimeWatcher(
-        "gtfs_data/2023_december/philadelphia_gtfs.zip", 
-        "https://www3.septa.org/gtfsrt/septa-pa-us/Trip/rtTripUpdates.pb", 
-        -5, "realtime/philadelphia", 
-        resuming_from_previous=False
-    )
-    cleveland_watcher = RealtimeWatcher(
-        "gtfs_data/2023_december/cleveland_gtfs.zip", 
-        "https://gtfs-rt.gcrta.vontascloud.com/TMGTFSRealTimeWebService/TripUpdate/TripUpdates.pb", 
-        -5, "realtime/cleveland", 
-        resuming_from_previous=False
-    )
-    nola_watcher = RealtimeWatcher(
-        "data/miami/miami_gtfs.zip", 
-        "https://bustime.norta.com/gtfsrt/trips", 
-        -6, "realtime/new_orleans", 
-        api_key=NOLA_API_KEY, 
-        resuming_from_previous=False
-    )
-
-    threads = [
-        sf_watcher.watch(),
-        miami_watcher.watch(), 
-        la_watcher.watch(),
-        philedelphia_watcher.watch(),
-        nola_watcher.watch(),
-        cleveland_watcher.watch()
-    ]
-    for t in threads:
-        t.join()
+    # threads = [
+    #     sf_watcher.watch(),
+    #     miami_watcher.watch(), 
+    #     la_watcher.watch(),
+    #     philedelphia_watcher.watch(),
+    #     nola_watcher.watch(),
+    #     cleveland_watcher.watch()
+    # ]
+    # for t in threads:
+    #     t.join()
 
     
 
