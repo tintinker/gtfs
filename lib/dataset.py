@@ -123,7 +123,9 @@ class Dataset:
                 return []
             
         dataset.node_attributes.routes = dataset.node_attributes.routes.apply(load_route_list)
-        dataset.edge_attributes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1], dtype=util.DATA_TYPES).drop_duplicates()
+        dataset.edge_attributes = pd.read_csv(folder / "edge_attributes.csv", index_col=[0,1], dtype=util.EDGE_DATA_TYPES).drop_duplicates()
+        edge_pairs = list(zip(dataset.edge_attributes.source_stop_id, dataset.edge_attributes.destination_stop_id))
+        dataset.edge_attributes = dataset.edge_attributes.set_index(pd.MultiIndex.from_tuples(edge_pairs))
         return dataset
    
     
@@ -233,7 +235,7 @@ class Dataset:
     def _download_delay_info(self):
         conn = create_engine(f"sqlite:///{self.delay_sqlite_db_str}")
 
-        self.delay_df = pd.read_sql_query(delay_query(), conn)
+        self.delay_df = pd.read_sql_query(delay_query(), conn, dtype=util.DELAY_DATA_TYPES)
 
         self.delay_df = self.delay_df.groupby(['stop_id', 'trip_sequence']).agg({
             'trip_id': 'first',
@@ -247,7 +249,7 @@ class Dataset:
 
         self.delay_df.columns = self.delay_df.columns.to_flat_index().map(lambda x: x[0]+"_"+x[1] if x[1] == 'max' or x[1] == 'min' else x[0])
         self.delay_df.minute_delay = self.delay_df.minute_delay.clip(0, self.delay_max)
-
+        
     def _link_routes(self):
         self.G = nx.DiGraph()
         trips = self.trips.copy()
@@ -290,6 +292,7 @@ class Dataset:
                 cur_driving_time = (trip_stop_times.arrival_time.iloc[i] - trip_stop_times.departure_time.iloc[i - 1]) / SECONDS_TO_MINUTES
 
                 edge = (prev_stop_id, stop_id)
+                
                 if not self.G.has_edge(*edge):
                     self.G.add_edge(*edge)
                     edge_info[edge] = {
@@ -308,12 +311,16 @@ class Dataset:
                     
                     stops_to_routes[prev_stop_id].add(route_id)
                     stops_to_routes[stop_id].add(route_id) 
+                
+                edge_info[edge]["source_stop_id"] = prev_stop_id
+                edge_info[edge]["destination_stop_id"] = stop_id
 
-                    if self.include_delay:
-                        delay_info = self.delay_df[(self.delay_df.stop_id == stop_id) & (self.delay_df.trip_sequence == trip_stop_times.stop_sequence.iloc[i])]
-                        avg_delay = np.nan if delay_info.empty else delay_info.minute_delay.iloc[0]
-                        edge_info[(prev_stop_id, stop_id)]["avg_delay"] = avg_delay
+                if self.include_delay:
+                    delay_info = self.delay_df[(self.delay_df.stop_id == stop_id) & (self.delay_df.trip_sequence == trip_stop_times.stop_sequence.iloc[i])]
+                    avg_delay = np.nan if delay_info.empty else delay_info.minute_delay.iloc[0]
+                    edge_info[edge]["avg_delay"] = avg_delay
 
+                    
         for edge in edge_info:
             edge_info[edge]["routes"] = tuple(edge_info[edge]["routes"])
 

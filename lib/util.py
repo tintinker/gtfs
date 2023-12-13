@@ -30,6 +30,16 @@ DATA_TYPES = {
     'route_id': str,
     'trip_id': str
 }
+EDGE_DATA_TYPES = {
+    'source_stop_id': str,
+    'destination_stop_id': str
+}
+
+DELAY_DATA_TYPES = {
+    'stop_id': str,
+    'route_id': str,
+    'trip_id': str
+}
 
 def export_json(d, filename):
     with open(filename, "w+") as f:

@@ -22,7 +22,9 @@ class DelayDataset(Dataset):
         graph_with_attrs = self.G.copy()
         nx.set_node_attributes(graph_with_attrs, self.node_attributes[node_attribute_names].to_dict(orient='index'))
         nx.set_edge_attributes(graph_with_attrs, self.edge_attributes[edge_attribute_names].to_dict(orient='index'))
-        
+        print(graph_with_attrs)
+        #print(self.edge_attributes[edge_attribute_names].to_dict(orient='index'))
+        #print(graph_with_attrs.edges(data=True))
         if exclude_edges:
             graph_with_attrs.remove_edges_from(exclude_edges)
         
