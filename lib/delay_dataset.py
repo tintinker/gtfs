@@ -28,7 +28,7 @@ class DelayDataset(Dataset):
         edge_attributes = self.edge_attributes.dropna(subset=edge_attribute_names)
 
         good_edges = self.edge_attributes[self.edge_attributes[edge_attribute_names].notna().all(axis=1)].index.tolist()
-        good_nodes = self.edge_attributes[self.node_attributes[node_attribute_names].notna().all(axis=1)].index.tolist()
+        good_nodes = self.node_attributes[self.node_attributes[node_attribute_names].notna().all(axis=1)].index.tolist()
         graph_with_attrs = graph_with_attrs.subgraph(good_nodes)
         graph_with_attrs = graph_with_attrs.edge_subgraph(good_edges)
 
