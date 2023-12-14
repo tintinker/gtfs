@@ -67,8 +67,8 @@ class DelayDataset(Dataset):
         prediction_data = []
         for i in range(everything.shape[0]):
             line = LineString([
-                (everything[i, 1].item(), everything[i, 2].item()),
-                (everything[i, 4].item(), everything[i, 5].item())
+                (everything[i, 2].item(), everything[i, 1].item()),
+                (everything[i, 5].item(), everything[i, 4].item())
                 ])
             t = everything[i, -2].item()
             p = everything[i, -1].item()
