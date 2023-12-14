@@ -158,6 +158,7 @@ class CensusData:
     
     def add_location(self, point: Point):
         location_data = self.location_request(point)
+        self._debug(point)
         state_code, county_code, tract_code, block_code, area = location_data
 
         longitude, latitude = point.x, point.y
