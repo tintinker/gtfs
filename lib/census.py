@@ -5,8 +5,8 @@ import yaml
 import requests
 from shapely.geometry import Point
 import geopandas as gpd
-from pathlib import Path
-import json
+
+pd.options.mode.chained_assignment = None 
 
 
 
@@ -85,17 +85,16 @@ class Query:
         dfs = []
         
         all_batched_queries = list(self.get_batched_queries())
-        for i, url_list in tqdm(enumerate(all_batched_queries)):
-            self._debug(f"\n\n-------------------\nQuery: [{i}/{len(all_batched_queries)}]\n--------------------------------\n")
+        for i, url_list in tqdm(enumerate(all_batched_queries), total=len(all_batched_queries), leave=False):
             df = pd.DataFrame(columns=Query.GEO_FIELDS)
             for url in url_list:
-                self._debug(str(url))
                 r = requests.get(url)
                 batchdf = pd.DataFrame(r.json())
                 batchdf.columns = batchdf.iloc[0]
                 batchdf = batchdf.drop(0)
                 df = df.merge(batchdf, on=Query.GEO_FIELDS, how='outer')
             dfs.append(df)
+
         
         df = pd.concat(dfs).apply(pd.to_numeric)
 
@@ -119,7 +118,7 @@ class CensusData:
     DATA_SOURCE = "2021/acs/acs5"
     BLOCK_GROUP_YEAR = "2021"
 
-    def __init__(self, tables_file, groupings_file = None, geo_cache = "census_geo.cache", data_cache = "census_data.cache", census_boundaries_file = None, logger=None):
+    def __init__(self, census_boundaries_file, tables_file, groupings_file = None, logger=None):
         self.tables_file = tables_file
         self.groupings_file = groupings_file
 
@@ -127,40 +126,12 @@ class CensusData:
         self.location_list = {}
         self.data = pd.DataFrame(columns=Query.GEO_FIELDS)
 
-        if census_boundaries_file:
-            self.census_boundaries_gdf = gpd.read_file(census_boundaries_file)
-            self.census_boundaries_spatial_index = self.census_boundaries_gdf.sindex
-        else:
-            self.census_boundaries_gdf = None
-            self.census_boundaries_spatial_index = None
+        self.census_boundaries_gdf = gpd.read_file(census_boundaries_file)
+        self.census_boundaries_spatial_index = self.census_boundaries_gdf.sindex
 
-        self.data_cache = data_cache
-        self.geo_cache = geo_cache
         self.logger = logger
-        
-        if Path(geo_cache).is_file():
-            with open(geo_cache) as f:
-                geo_data = json.load(f)
-                location_list = geo_data["location_list"]
-                tract_list = geo_data["tract_list"]
-                self.location_list = {tuple(map(float, k.split(","))):v for k,v in location_list.items()}
-                self.tract_list = {tuple(k.split(",")):v for k,v in tract_list.items()}
 
-        if Path(data_cache).is_file():
-            self.data = pd.read_csv(data_cache, index_col=0)
-
-    def cache(self):
-        self.data.to_csv(str(self.data_cache))
-
-        location_list_cache = {f"{k[0]},{k[1]}":v for k,v in self.location_list.items()}
-        tract_list_cache = {f"{k[0]},{k[1]}":v for k,v in self.tract_list.items()}
-        geo_data = {}
-        geo_data["location_list"] = location_list_cache
-        geo_data["tract_list"] = tract_list_cache
-        with open(str(self.geo_cache), "w+") as f:
-            json.dump(geo_data, f)
-
-    def fast_location_request(self, point):
+    def location_request(self, point):
         possible_matches_index = list(self.census_boundaries_spatial_index.intersection(point.bounds))
         possible_matches = self.census_boundaries_gdf.iloc[possible_matches_index]
         precise_matches = possible_matches[possible_matches.intersects(point)]
@@ -168,54 +139,38 @@ class CensusData:
         if precise_matches.empty:
             return None
         
+        precise_matches["area"] = precise_matches.area
         match = precise_matches.iloc[0]
+
         state_code = match["STATEFP"]
         county_code = match["COUNTYFP"]
         tract_code = match["TRACTCE"]
         block_code = match["BLKGRPCE"]
-        return state_code, county_code, tract_code, block_code 
-    
-    def slow_location_request(self, point):
-        longitude, latitude = point.x, point.y
-        response = requests.get(f"https://geo.fcc.gov/api/census/block/find?latitude={latitude}&longitude={longitude}&censusYear={CensusData.BLOCK_GROUP_YEAR}&format=json")
-        data = response.json()
-        state_code = data["Block"]["FIPS"][:2]
-        county_code = data["Block"]["FIPS"][2:5]
-        tract_code = data["Block"]["FIPS"][5:11]
-        block_code = data["Block"]["FIPS"][11]
-        return state_code, county_code, tract_code, block_code 
-    
+        area = match["area"]
+        return state_code, county_code, tract_code, block_code, area
         
     
     def add_location(self, point: Point):
-        location_data = None
-        if self.census_boundaries_spatial_index is not None and self.census_boundaries_gdf is not None:
-            location_data = self.fast_location_request(point)
-        if not location_data:
-            location_data = self.slow_location_request(point)
-        if not location_data:
-            return
-        state_code, county_code, tract_code, block_code = location_data
+        location_data = self.location_request(point)
+        state_code, county_code, tract_code, block_code, area = location_data
 
         longitude, latitude = point.x, point.y
         self.tract_list[(state_code, county_code)].append(tract_code)
-        self.location_list[(latitude, longitude)] = (state_code, county_code, tract_code, block_code[-1])
+        self.location_list[(latitude, longitude)] = (state_code, county_code, tract_code, block_code[-1], area)
 
     def add_locations_from_geodataframe(self, gdf):
         for _, point in tqdm(gdf.geometry.items(), total=len(gdf.geometry)):
             if (point.y, point.x) not in self.location_list:
                 self.add_location(point)
 
-        self.cache()
-
     def lookup_location(self, point: Point):
         longitude, latitude = point.x, point.y
         if (latitude, longitude) not in self.location_list:
-            print(f"Location {(latitude, longitude)} not found, adding this location.")
+            self._debug(f"Location {(latitude, longitude)} not found, adding this location.")
             self.add_location(latitude, longitude)
             self.download_data()
 
-        state_code, county_code, tract_code, block_code =  self.location_list[(latitude, longitude)]
+        state_code, county_code, tract_code, block_code, area =  self.location_list[(latitude, longitude)]
         df = self.data[(self.data.state == int(state_code)) & (self.data.county == int(county_code)) & (self.data.tract == int(tract_code)) & (self.data['block group'] == int(block_code))]
         return df.iloc[0].to_dict()
     
@@ -225,8 +180,9 @@ class CensusData:
 
         dfs = []
         for (latitude, longitude) in self.location_list:
-            state_code, county_code, tract_code, block_code =  self.location_list[(latitude, longitude)]
+            state_code, county_code, tract_code, block_code, area =  self.location_list[(latitude, longitude)]
             df = self.data[(self.data.state == int(state_code)) & (self.data.county == int(county_code)) & (self.data.tract == int(tract_code)) & (self.data['block group'] == int(block_code))]
+            df["block_group_area"] = area
             if 'geometry' not in df.columns:
                 df['geometry'] = Point(longitude, latitude)
             dfs.append(df)
@@ -236,7 +192,7 @@ class CensusData:
     
     def download_data(self):
         dfs = []
-        for (state_code, county_code) in self.tract_list:
+        for (state_code, county_code) in tqdm(self.tract_list):
             query = Query(CensusData.DATA_SOURCE, state_code, county_code, self.logger)
             query.add_tables_from_yaml(self.tables_file)
             if self.groupings_file:
@@ -247,6 +203,9 @@ class CensusData:
             dfs.append(query.get())
 
         self.data = pd.concat(dfs)
-        self.cache()
+        
+    def _debug(self, message):
+        if self.logger:
+            self.logger.debug(message)
 
 

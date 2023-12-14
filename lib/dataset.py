@@ -17,12 +17,10 @@ import networkx as nx
 import lib.util as util
 import shutil
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
-
+pd.options.mode.chained_assignment = None 
 tqdm.pandas()
-
-SECONDS_TO_MINUTES = 60
-
 
 class Dataset:
     def __init__(self, name, gtfs_zip_filename, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False, include_census=True, census_boundaries_file=None):
@@ -53,7 +51,7 @@ class Dataset:
         
         self.include_census = include_census
         census_tables, census_groupings = census_tables_and_groupings
-        self.census = CensusData(census_tables, census_groupings, census_boundaries_file=census_boundaries_file, geo_cache = self.save_folder / f"{name}_census_geo.cache", data_cache= self.save_folder / f"{name}_census_data.cache", logger=self.logger)
+        self.census = CensusData(census_boundaries_file, census_tables, census_groupings, logger=self.logger)
         
         self.nearby_stop_threshold = nearby_stop_threshold
         self.nearby_poi_threshold = nearby_poi_threshold
@@ -143,7 +141,7 @@ class Dataset:
         util.export_json(nx.node_link_data(self.G), folder / "graph.json")
         self.node_attributes.drop_duplicates().to_csv(folder / "node_attribtes.csv")
         self.edge_attributes.drop_duplicates().to_csv(folder / "edge_attributes.csv")
-        self.delay_df.drop_duplicates().to_csv(folder / "delay.csv")
+        
 
         for file_path in folder.glob("*"):
             if file_path.is_file() and file_path.suffix == ".cache":
@@ -238,7 +236,10 @@ class Dataset:
         conn = create_engine(f"sqlite:///{self.delay_sqlite_db_str}")
 
         self.delay_df = pd.read_sql_query(delay_query(), conn, dtype=util.DELAY_DATA_TYPES)
-
+        self.delay_df.minute_delay = self.delay_df.minute_delay.clip(0, self.delay_max)
+        
+        self.delay_df.drop_duplicates().to_csv(self.save_folder / "raw_delay.csv")        
+        
         self.delay_df = self.delay_df.groupby(['stop_id', 'trip_sequence']).agg({
             'trip_id': 'first',
             'route_id': 'first',
@@ -250,8 +251,9 @@ class Dataset:
             'planned_arrival_seconds_since_midnight': ['max', 'min']}).reset_index()
 
         self.delay_df.columns = self.delay_df.columns.to_flat_index().map(lambda x: x[0]+"_"+x[1] if x[1] == 'max' or x[1] == 'min' else x[0])
-        self.delay_df.minute_delay = self.delay_df.minute_delay.clip(0, self.delay_max)
         
+        self.delay_df.drop_duplicates().to_csv(self.save_folder / "grouped_delay.csv")        
+  
     def _link_routes(self):
         self.G = nx.DiGraph()
         trips = self.trips.copy()
@@ -291,7 +293,7 @@ class Dataset:
                 if prev_stop_id == stop_id:
                     continue
 
-                cur_driving_time = (trip_stop_times.arrival_time.iloc[i] - trip_stop_times.departure_time.iloc[i - 1]) / SECONDS_TO_MINUTES
+                cur_driving_time = (trip_stop_times.arrival_time.iloc[i] - trip_stop_times.departure_time.iloc[i - 1]) / util.SECONDS_TO_MINUTES
 
                 edge = (prev_stop_id, stop_id)
                 

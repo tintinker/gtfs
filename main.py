@@ -11,14 +11,14 @@ if __name__ == "__main__":
     np.random.seed(42)
     random.seed(42)
 
-    dataset = DelayDataset.load("datasets/philadelphia_delay")
-    chosen_node_features = ['stop_lat', 'stop_lon', 'near_starbucks', 'total_population','population_over_age_25', 'has_bachelors_degree_percent','income_to_poverty_under_200']
-    chosen_edge_features = ['avg_delay','driving_time']
-    print(dataset.pyg_data(node_attribute_names=chosen_node_features, edge_attribute_names=chosen_edge_features))
+    # dataset = DelayDataset.load("datasets/philadelphia_delay")
+    # chosen_node_features = ['stop_lat', 'stop_lon', 'near_starbucks', 'total_population','population_over_age_25', 'has_bachelors_degree_percent','income_to_poverty_under_200']
+    # chosen_edge_features = ['avg_delay','driving_time']
+    # print(dataset.pyg_data(node_attribute_names=chosen_node_features, edge_attribute_names=chosen_edge_features))
     
-    util.show_viz(dataset.visualize(shp_folder="."))
-    # dataset = DelayDataset("sanfrancisco",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco_delay", include_delay=True, delay_sqlite_db_str="realtime_dec7_12PT/sanfrancisco/realtime.db", census_boundaries_file="census_boundaries_data/2021/California")
-    # dataset.build()
+    # util.show_viz(dataset.visualize(shp_folder="."))
+    dataset = DelayDataset("sanfrancisco3",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", save_folder="datasets/sanfrancisco_delay3", include_delay=True, delay_sqlite_db_str="realtime_dec7_12PT/sanfrancisco/realtime.db", census_boundaries_file="census_boundaries_data/2021/California")
+    dataset.build()
 
     # dataset = DelayDataset("miami",  "gtfs_data/2023_december/miami_gtfs.zip", save_folder="datasets/miami_delay", include_delay=True, delay_sqlite_db_str="realtime/miami/realtime.db", census_boundaries_file="census_boundaries_data/2021/Florida")
     # dataset.build()
