@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # print(dataset.pyg_data(node_attribute_names=chosen_node_features, edge_attribute_names=chosen_edge_features))
     
     # util.show_viz(dataset.visualize(shp_folder="."))
-    dataset = DelayDataset("sanfrancisco3nopeak",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", "census_boundaries_data/2021/California", save_folder="datasets/sanfrancisco3nopeak", include_delay=True, delay_sqlite_db_str="realtime_dec7_12PT/sanfrancisco/realtime.db", only_during_peak=False)
+    dataset = DelayDataset("sanfrancisco3full",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", "census_boundaries_data/2021/California", save_folder="datasets/sanfrancisco3full", include_delay=True, delay_sqlite_db_str="realtime_dec7_12PT/sanfrancisco/realtime.db", only_during_peak=False)
     dataset.build()
 
     dataset = DelayDataset("sanfrancisco3peak",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", "census_boundaries_data/2021/California", save_folder="datasets/sanfrancisco3peak", include_delay=True, delay_sqlite_db_str="realtime_dec7_12PT/sanfrancisco/realtime.db", only_during_peak=True)

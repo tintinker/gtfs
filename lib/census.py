@@ -5,6 +5,7 @@ import yaml
 import requests
 from shapely.geometry import Point
 import geopandas as gpd
+import utm
 
 pd.options.mode.chained_assignment = None 
 
@@ -139,15 +140,20 @@ class CensusData:
         if precise_matches.empty:
             return None
         
-        precise_matches["area"] = precise_matches.area
+        median_lat = precise_matches.geometry.centroid.y.median()
+        median_lon = precise_matches.geometry.centroid.x.median()
+        _, _, utm_zone, _ = utm.from_latlon(median_lat, median_lon)
+        print(f'EPSG:{32600 + utm_zone}')
+        precise_matches["block_group_area"] = precise_matches.to_crs(f'EPSG:{32600 + utm_zone}' ).area
+        
         match = precise_matches.iloc[0]
 
         state_code = match["STATEFP"]
         county_code = match["COUNTYFP"]
         tract_code = match["TRACTCE"]
         block_code = match["BLKGRPCE"]
-        area = match["area"]
-        return state_code, county_code, tract_code, block_code, area
+        bg_area = match["block_group_area"]
+        return state_code, county_code, tract_code, block_code, bg_area
         
     
     def add_location(self, point: Point):
@@ -170,7 +176,7 @@ class CensusData:
             self.add_location(latitude, longitude)
             self.download_data()
 
-        state_code, county_code, tract_code, block_code, area =  self.location_list[(latitude, longitude)]
+        state_code, county_code, tract_code, block_code, bg_area =  self.location_list[(latitude, longitude)]
         df = self.data[(self.data.state == int(state_code)) & (self.data.county == int(county_code)) & (self.data.tract == int(tract_code)) & (self.data['block group'] == int(block_code))]
         return df.iloc[0].to_dict()
     
@@ -180,9 +186,9 @@ class CensusData:
 
         dfs = []
         for (latitude, longitude) in self.location_list:
-            state_code, county_code, tract_code, block_code, area =  self.location_list[(latitude, longitude)]
+            state_code, county_code, tract_code, block_code, bg_area =  self.location_list[(latitude, longitude)]
             df = self.data[(self.data.state == int(state_code)) & (self.data.county == int(county_code)) & (self.data.tract == int(tract_code)) & (self.data['block group'] == int(block_code))]
-            df["block_group_area"] = area
+            df["block_group_area"] = bg_area
             if 'geometry' not in df.columns:
                 df['geometry'] = Point(longitude, latitude)
             dfs.append(df)
