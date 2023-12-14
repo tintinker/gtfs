@@ -65,7 +65,7 @@ class DelayDataset(Dataset):
         
         target_data = []
         prediction_data = []
-        for i in everything.shape[0]:
+        for i in range(everything.shape[0]):
             line = LineString([
                 (everything[i, 1], everything[i, 2]),
                 (everything[i, 4], everything[i, 5])
