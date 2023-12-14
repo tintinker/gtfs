@@ -1,4 +1,4 @@
-def delay_query(stop_id = None, trip_id = None):
+def delay_query(only_during_peak = True):
     return f"""
     WITH LatestTripUpdate AS (
         SELECT
@@ -41,8 +41,15 @@ def delay_query(stop_id = None, trip_id = None):
                     AND stop_times.stop_id = stop_time_updates.stop_id
                     AND stop_times.stop_sequence = stop_time_updates.stop_sequence
         WHERE
-            stop_time_updates.arrival_time < CURRENT_TIMESTAMP
-        
+            (stop_time_updates.arrival_time < CURRENT_TIMESTAMP)
+            {
+            '''AND 
+            (
+                (stop_times.arrival_time BETWEEN 60*60*7 AND 60*60*9)
+                OR
+                (stop_times.arrival_time BETWEEN 60*60*17 AND 60*60*19)
+            )''' if only_during_peak else ''
+            }
     )
     SELECT
         update_stop_id as stop_id,

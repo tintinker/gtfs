@@ -52,7 +52,16 @@ class DelayDataset(Dataset):
         target = target[test_indices]
         predictions = predictions[test_indices]
 
-        everything = torch.concat((source_nodes, source_lat, source_lng, dest_nodes, dest_lat, dest_lng, target, predictions), dim=1)
+        everything = torch.concat((
+            source_nodes.unsqueeze(1),
+            source_lat.unsqueeze(1),
+            source_lng.unsqueeze(1),
+            dest_nodes.unsqueeze(1),
+            dest_lat.unsqueeze(1),
+            dest_lng.unsqueeze(1),
+            target.unsqueeze(1),
+            predictions.unsqueeze(1)
+        ), dim=1)
         
         target_data = []
         prediction_data = []
