@@ -23,7 +23,7 @@ pd.options.mode.chained_assignment = None
 tqdm.pandas()
 
 class Dataset:
-    def __init__(self, name, gtfs_zip_filename, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False, include_census=True, census_boundaries_file=None):
+    def __init__(self, name, gtfs_zip_filename, census_boundaries_file, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False, include_census=True, only_during_peak=True):
         print(gtfs_zip_filename)
         if num_trip_samples % 2 == 0:
             assert Exception("num_trip_sampels must be odd number")
@@ -51,7 +51,8 @@ class Dataset:
         
         self.include_census = include_census
         census_tables, census_groupings = census_tables_and_groupings
-        self.census = CensusData(census_boundaries_file, census_tables, census_groupings, logger=self.logger)
+        self.census_boundaries_file = census_boundaries_file
+        self.census = CensusData(self.census_boundaries_file, census_tables, census_groupings, logger=self.logger)
         
         self.nearby_stop_threshold = nearby_stop_threshold
         self.nearby_poi_threshold = nearby_poi_threshold
@@ -60,6 +61,7 @@ class Dataset:
         self.include_delay = include_delay
         self.delay_sqlite_db_str = delay_sqlite_db_str if delay_sqlite_db_str else ""
         self.delay_max = delay_max
+        self.only_during_peak = only_during_peak 
 
         self.G = nx.DiGraph()
 
@@ -82,7 +84,11 @@ class Dataset:
             "delay_sqlite_db_str": self.delay_sqlite_db_str,
             "delay_max": self.delay_max,
             "built": self.built,
-            "include_delay": self.include_delay
+            "include_delay": self.include_delay,
+            "only_during_peak": self.only_during_peak,
+            "census_boundaries_file": self.census_boundaries_file,
+            "include_census": self.include_census,
+            "only_during_peak": self.only_during_peak
         }
 
     @property
@@ -103,7 +109,7 @@ class Dataset:
         with open(folder / "graph.json") as f:
             graph = json.load(f)
         
-        dataset = Dataset(dataset_info["name"], dataset_info["gtfs_source"], dataset_info["nearby_stop_threshold"], dataset_info["nearby_poi_threshold"], (dataset_info["census_tables_file"], dataset_info["census_groupings_file"]), dataset_info["num_trip_samples"], dataset_info["save_folder"], dataset_info["include_delay"], dataset_info["delay_sqlite_db_str"], dataset_info["delay_max"], dataset_info["built"])
+        dataset = Dataset(dataset_info["name"], dataset_info["gtfs_source"], dataset_info["census_boundaries_file"], dataset_info["nearby_stop_threshold"], dataset_info["nearby_poi_threshold"], (dataset_info["census_tables_file"], dataset_info["census_groupings_file"]), dataset_info["num_trip_samples"], dataset_info["save_folder"], dataset_info["include_delay"], dataset_info["delay_sqlite_db_str"], dataset_info["delay_max"], dataset_info["built"], dataset_info["include_census"], dataset_info["only_during_peak"])
         dataset.G = nx.node_link_graph(graph)
 
         dataset.node_attributes = pd.read_csv(folder / "node_attribtes.csv", index_col=0, dtype=util.DATA_TYPES).drop_duplicates()
@@ -235,7 +241,7 @@ class Dataset:
     def _download_delay_info(self):
         conn = create_engine(f"sqlite:///{self.delay_sqlite_db_str}")
 
-        self.delay_df = pd.read_sql_query(delay_query(), conn, dtype=util.DELAY_DATA_TYPES)
+        self.delay_df = pd.read_sql_query(delay_query(self.only_during_peak), conn, dtype=util.DELAY_DATA_TYPES)
         self.delay_df.minute_delay = self.delay_df.minute_delay.clip(0, self.delay_max)
         
         self.delay_df.drop_duplicates().to_csv(self.save_folder / "raw_delay.csv")        
