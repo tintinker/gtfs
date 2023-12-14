@@ -26,6 +26,7 @@ SECONDS_TO_MINUTES = 60
 
 class Dataset:
     def __init__(self, name, gtfs_zip_filename, nearby_stop_threshold = 200, nearby_poi_threshold = 400, census_tables_and_groupings = ("lib/census_tables.yaml", "lib/census_groupings.yaml"), num_trip_samples=5, save_folder = None, include_delay=False, delay_sqlite_db_str = None, delay_max = 30, already_built=False, include_census=True, census_boundaries_file=None):
+        print(gtfs_zip_filename)
         if num_trip_samples % 2 == 0:
             assert Exception("num_trip_sampels must be odd number")
         

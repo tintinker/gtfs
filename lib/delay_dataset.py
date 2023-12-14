@@ -38,8 +38,8 @@ class DelayDataset(Dataset):
         
         return from_networkx(graph_with_attrs, node_attribute_names, edge_attribute_names)
 
-    def add_predictions(self, df):
-        self.edge_attributes = self.edge_attributes.merge(df, how="left")
+    def visualize_from_pyg(self, data, lat_feature_idx, lng_feature_idx, test_indices, target, predictions):
+        pass
 
     def visualize(self, feature="avg_delay", shp_folder = None):        
         good_edges = self.edge_attributes[self.edge_attributes[feature].notna()].index.tolist()
