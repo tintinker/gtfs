@@ -39,15 +39,15 @@ class DelayDataset(Dataset):
         
         return from_networkx(graph_with_attrs, node_attribute_names, edge_attribute_names)
 
-    def visualize_from_pyg(self, data, test_indices, lat_feature_idx, lng_feature_idx, target, predictions):
+    def visualize_from_pyg(self, data, test_indices, lats, lngs, target, predictions):
    
         source_nodes = data.edge_index[0, test_indices]
         dest_nodes = data.edge_index[1, test_indices]
         
-        source_lat = data.x[source_nodes, lat_feature_idx]
-        source_lng = data.x[source_nodes, lng_feature_idx]
-        dest_lat = data.x[dest_nodes, lat_feature_idx]
-        dest_lng = data.x[dest_nodes, lng_feature_idx]
+        source_lat = lats[source_nodes]
+        source_lng = lngs[source_nodes]
+        dest_lat = lats[dest_nodes]
+        dest_lng = lngs[dest_nodes]
 
         target = target[test_indices]
         predictions = predictions[test_indices]
