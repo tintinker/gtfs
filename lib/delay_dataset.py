@@ -67,22 +67,22 @@ class DelayDataset(Dataset):
         prediction_data = []
         for i in range(everything.shape[0]):
             line = LineString([
-                (everything[i, 1], everything[i, 2]),
-                (everything[i, 4], everything[i, 5])
+                (everything[i, 1].item(), everything[i, 2].item()),
+                (everything[i, 4].item(), everything[i, 5].item())
                 ])
-            t = everything[i, -2]
-            p = everything[i, -1]
+            t = everything[i, -2].item()
+            p = everything[i, -1].item()
 
             target_data.append({
-                'from': everything[i, 0],
-                    'to':  everything[i, 3],
+                'from': everything[i, 0].item(),
+                    'to':  everything[i, 3].item(),
                     'target': t,
                     'geometry': line,
                     'color_map_field': t,
                 })
             prediction_data.append({
-                'from': everything[i, 0],
-                    'to':  everything[i, 3],
+                'from': everything[i, 0].item(),
+                    'to':  everything[i, 3].item(),
                     'target': p,
                     'geometry': line,
                     'color_map_field': p,
