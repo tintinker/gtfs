@@ -9,6 +9,7 @@ import networkx as nx
 import numpy as np
 from shapely import Point, LineString
 import geopandas as gpd
+import torch
 
 class DelayDataset(Dataset):
     @staticmethod
@@ -38,8 +39,50 @@ class DelayDataset(Dataset):
         
         return from_networkx(graph_with_attrs, node_attribute_names, edge_attribute_names)
 
-    def visualize_from_pyg(self, data, lat_feature_idx, lng_feature_idx, test_indices, target, predictions):
-        pass
+    def visualize_from_pyg(self, data, test_indices, lat_feature_idx, lng_feature_idx, target, predictions):
+   
+        source_nodes = data.edge_index[0, test_indices]
+        dest_nodes = data.edge_index[1, test_indices]
+        
+        source_lat = data.x[source_nodes, lat_feature_idx]
+        source_lng = data.x[source_nodes, lng_feature_idx]
+        dest_lat = data.x[dest_nodes, lat_feature_idx]
+        dest_lng = data.x[dest_nodes, lng_feature_idx]
+
+        target = target[test_indices]
+        predictions = predictions[test_indices]
+
+        everything = torch.concat((source_nodes, source_lat, source_lng, dest_nodes, dest_lat, dest_lng, target, predictions), dim=1)
+        
+        target_data = []
+        prediction_data = []
+        for i in everything.shape[0]:
+            line = LineString([
+                (everything[i, 1], everything[i, 2]),
+                (everything[i, 4], everything[i, 5])
+                ])
+            t = everything[i, -2]
+            p = everything[i, -1]
+
+            target_data.append({
+                'from': everything[i, 0],
+                    'to':  everything[i, 3],
+                    'target': t,
+                    'geometry': line,
+                    'color_map_field': t,
+                })
+            prediction_data.append({
+                'from': everything[i, 0],
+                    'to':  everything[i, 3],
+                    'target': p,
+                    'geometry': line,
+                    'color_map_field': p,
+                })
+        target_gdf = gpd.GeoDataFrame(target_data, crs="EPSG:4326")
+        prediction_gdf = gpd.GeoDataFrame(prediction_data, crs="EPSG:4326")
+        return target_gdf, prediction_gdf
+
+
 
     def visualize(self, feature="avg_delay", shp_folder = None):        
         good_edges = self.edge_attributes[self.edge_attributes[feature].notna()].index.tolist()
