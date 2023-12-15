@@ -11,6 +11,16 @@ if __name__ == "__main__":
     np.random.seed(42)
     random.seed(42)
 
+    dataset = DelayDataset.load("datasets/philadelphia_delay_peak")
+    dataset._debug("include delay applesauce"+str(dataset.include_delay))
+    dataset.add_std_column()
+
+    dataset = DelayDataset.load("datasets/sanfrancisco_delay_peak")
+    dataset.add_std_column()
+
+    dataset = DelayDataset.load("datasets/los_angeles_delay_peak")
+    dataset.add_std_column()
+
     # dataset = DelayDataset.load("datasets/philadelphia_delay")
     # chosen_node_features = ['stop_lat', 'stop_lon', 'near_starbucks', 'total_population','population_over_age_25', 'has_bachelors_degree_percent','income_to_poverty_under_200']
     # chosen_edge_features = ['avg_delay','driving_time']
@@ -23,11 +33,11 @@ if __name__ == "__main__":
     # dataset = DelayDataset("sanfrancisco_delay_peak",  "gtfs_data/2023_december/sanfrancisco_gtfs.zip", "census_boundaries_data/2021/California", save_folder="datasets/sanfrancisco_delay_peak", include_delay=True, delay_sqlite_db_str="realtime/sanfrancisco/realtime.db", only_during_peak=True)
     # dataset.build()
 
-    dataset = DelayDataset("philadelphia_delay_full",  "gtfs_data/2023_december/philadelphia_gtfs.zip", "census_boundaries_data/2021/PennDelawareNJ", save_folder="datasets/philadelphia_delay_full", include_delay=True, delay_sqlite_db_str="realtime/philadelphia/realtime.db", only_during_peak=False)
-    dataset.build()
+    # dataset = DelayDataset("philadelphia_delay_full",  "gtfs_data/2023_december/philadelphia_gtfs.zip", "census_boundaries_data/2021/PennDelawareNJ", save_folder="datasets/philadelphia_delay_full", include_delay=True, delay_sqlite_db_str="realtime/philadelphia/realtime.db", only_during_peak=False)
+    # dataset.build()
 
-    dataset = DelayDataset("philadelphia_delay_peak",  "gtfs_data/2023_december/philadelphia_gtfs.zip", "census_boundaries_data/2021/PennDelawareNJ", save_folder="datasets/philadelphia_delay_peak", include_delay=True, delay_sqlite_db_str="realtime/philadelphia/realtime.db", only_during_peak=True)
-    dataset.build()
+    # dataset = DelayDataset("philadelphia_delay_peak",  "gtfs_data/2023_december/philadelphia_gtfs.zip", "census_boundaries_data/2021/PennDelawareNJ", save_folder="datasets/philadelphia_delay_peak", include_delay=True, delay_sqlite_db_str="realtime/philadelphia/realtime.db", only_during_peak=True)
+    # dataset.build()
 
     # dataset = DelayDataset("los_angeles_delay_full",  "gtfs_data/2023_december/los_angeles_gtfs.zip", "census_boundaries_data/2021/California", save_folder="datasets/los_angeles_delay_full", include_delay=True, delay_sqlite_db_str="realtime/la/realtime.db", only_during_peak=False)
     # dataset.build()

@@ -328,7 +328,10 @@ class Dataset:
                 if self.include_delay:
                     delay_info = self.delay_df[(self.delay_df.stop_id == stop_id) & (self.delay_df.trip_sequence == trip_stop_times.stop_sequence.iloc[i])]
                     avg_delay = np.nan if delay_info.empty else delay_info.minute_delay.iloc[0]
+                    delay_std = np.nan if (delay_info.empty or 'minute_delay_std' not in delay_info.columns) else delay_info.minute_delay_std.iloc[0]
                     edge_info[edge]["avg_delay"] = avg_delay
+                    edge_info[edge]["delay_std"] = delay_std
+
 
                     
         for edge in edge_info:

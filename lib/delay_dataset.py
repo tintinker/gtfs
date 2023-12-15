@@ -10,6 +10,7 @@ import numpy as np
 from shapely import Point, LineString
 import geopandas as gpd
 import torch
+import pandas as pd
 
 class DelayDataset(Dataset):
     @staticmethod
@@ -120,6 +121,36 @@ class DelayDataset(Dataset):
             gdf.to_file(os.path.join(shp_folder, "viz.shp"))
 
         return gdf
+    
+    def add_std_column(self):
+        self._debug("Reading Delay DF")
+        self.delay_df = pd.read_csv(self.save_folder / "raw_delay.csv", index_col=0, dtype=util.DELAY_DATA_TYPES)
+        
+        self._debug("Grouping Delay DF")
+
+        self.delay_df = self.delay_df.groupby(['stop_id', 'trip_sequence']).agg({
+            'trip_id': 'first',
+            'route_id': 'first',
+            'stop_name': 'first',
+            'route_name': 'first',
+            'minute_delay': ['mean','std'],
+            'oid': 'max',
+            'actual_arrival_time': ['max', 'min'],
+            'planned_arrival_seconds_since_midnight': ['max', 'min']}).reset_index()
+        
+
+        self.delay_df.columns = self.delay_df.columns.to_flat_index().map(lambda x: x[0]+"_"+x[1] if x[1] in ['max','min','mean','std'] else x[0])
+        self.delay_df["minute_delay"] = self.delay_df.minute_delay_mean
+        self.delay_df.drop_duplicates().to_csv(self.save_folder / "grouped_delay.csv")
+
+
+        self._debug("Linking Routes")
+        self._link_routes()
+        
+        self.save(self.save_folder)
+        self._debug("Saved to " + str(self.save_folder))
+
+  
 
        
     
